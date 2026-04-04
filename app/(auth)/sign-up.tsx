@@ -1,0 +1,130 @@
+import { router } from 'expo-router';
+import React from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+import { Button } from '../../components/ui/Button';
+import { signUpWithEmail } from '../../lib/supabase';
+
+const schema = z.object({
+  email: z.string().email('Enter a valid email'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+}).refine((d) => d.password === d.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
+type Form = z.infer<typeof schema>;
+
+export default function SignUpScreen() {
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
+    resolver: zodResolver(schema),
+  });
+
+  async function onSubmit(data: Form) {
+    try {
+      await signUpWithEmail(data.email, data.password);
+      router.replace('/(onboarding)/step-goals');
+    } catch (err) {
+      Alert.alert('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
+    }
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1 bg-white"
+    >
+      <View className="flex-1 px-6 justify-center gap-6">
+        <View className="gap-1">
+          <Text className="text-3xl font-bold text-[#1A1A2E]">Create account</Text>
+          <Text className="text-base text-[#6B7280]">
+            Set up your PlatePlan account in seconds.
+          </Text>
+        </View>
+
+        <View className="gap-4">
+          <View className="gap-1">
+            <Text className="text-sm font-medium text-[#1A1A2E]">Email</Text>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
+            />
+            {errors.email && <Text className="text-xs text-red-500">{errors.email.message}</Text>}
+          </View>
+
+          <View className="gap-1">
+            <Text className="text-sm font-medium text-[#1A1A2E]">Password</Text>
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
+                  secureTextEntry
+                  autoComplete="new-password"
+                  placeholder="Min. 8 characters"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
+            />
+            {errors.password && <Text className="text-xs text-red-500">{errors.password.message}</Text>}
+          </View>
+
+          <View className="gap-1">
+            <Text className="text-sm font-medium text-[#1A1A2E]">Confirm password</Text>
+            <Controller
+              control={control}
+              name="confirmPassword"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
+                  secureTextEntry
+                  autoComplete="new-password"
+                  placeholder="Repeat password"
+                  value={value}
+                  onChangeText={onChange}
+                />
+              )}
+            />
+            {errors.confirmPassword && (
+              <Text className="text-xs text-red-500">{errors.confirmPassword.message}</Text>
+            )}
+          </View>
+        </View>
+
+        <Button label="Create account" loading={isSubmitting} onPress={handleSubmit(onSubmit)} />
+
+        <TouchableOpacity onPress={() => router.back()} className="items-center">
+          <Text className="text-sm text-[#6B7280]">
+            Already have an account?{' '}
+            <Text className="text-[#2D6A4F] font-semibold">Sign in</Text>
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}

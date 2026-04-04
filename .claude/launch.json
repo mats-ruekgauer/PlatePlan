@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Expo (default)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "port": 8081
+    },
+    {
+      "name": "Expo iOS",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["/Users/mats/Documents/Privat/Projekte/PlatePlan/start-ios.js"],
+      "port": 8081
+    },
+    {
+      "name": "Expo Android",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "android"],
+      "port": 8081
+    }
+  ]
+}
