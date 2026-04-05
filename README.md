@@ -163,6 +163,26 @@ Aggregates all ingredients from a plan's recipes, deduplicates, groups by catego
 
 ---
 
+## Changelog
+
+### Round 1 — Core UX & Planning Improvements
+- Renamed "This Week" tab to **Meal Plan**
+- **Week navigation** — scroll up for previous week, scroll down to plan next week (with AI generation)
+- **Estimated price** per meal (EUR) shown as a green pill
+- **Meal status badge** — tap to cycle through Recommended → Planned → Prepared → Cooked → Rated
+- **Onboarding overhaul** — added favourite ingredients, replaced seasonal boolean with 1–5 importance scale
+- **Simplified Shopping List tab** — checklist with progress indicator, removed receipt scanner
+- Hidden Recipes tab (feature on hold)
+
+### Round 2 — Favourites, Automations & Meal Actions
+- **Favourite dishes** — star any cooked meal, add custom dishes manually, view/remove in Profile; favourites influence AI plan generation
+- **Bug fix** — "Edit preferences" in Profile no longer redirects back to Meal Plan (new standalone `/settings/preferences` screen)
+- **Automations** — new settings section with Apple Reminders export and SMS share, triggered on plan generation
+- **Meal actions** — Approve button (Recommended → Planned), Skip / Undo skip, ↻ Different (AI regenerates single meal slot)
+- **Auto shopping list** — shopping list generated automatically whenever a meal plan is created
+
+---
+
 ## Roadmap
 
 ### 🐛 Bug Fixes (current)
