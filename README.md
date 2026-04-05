@@ -198,6 +198,8 @@ Aggregates all ingredients from a plan's recipes, deduplicates, groups by catego
 - [ ] **Price per ingredient** — show cost breakdown at ingredient level, not just per serving
 - [ ] **Preferences: processed ingredients** — slider for how much pre-processed / convenience food is acceptable
 - [ ] **Dish list** — browse all generated recipes in one place
+- [ ] **Language settings** — support multiple languages for the app UI and generated recipes
+- [ ] **Switch AI provider to DeepSeek** — replace Anthropic Claude with DeepSeek API for lower inference costs
 
 ### 🔁 Ongoing
 - [ ] Fix bugs (post-feature)
