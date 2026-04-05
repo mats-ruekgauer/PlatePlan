@@ -187,9 +187,3 @@ Aggregates all ingredients from a plan's recipes, deduplicates, groups by catego
 - [ ] **Private go-live** — get the app running and approved on the App Store
 - [ ] **Friends & family go-live** — limited rollout for feedback
 - [ ] **Public go-live**
-
----
-
-## License
-
-MIT
