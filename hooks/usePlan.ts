@@ -11,6 +11,7 @@ import type {
   HydratedMeal,
   HydratedPlan,
   MealPlan,
+  MealStatus,
   PlannedMeal,
   PlanGenerationResult,
   Recipe,
@@ -22,7 +23,9 @@ export const planKeys = {
   all: ['plans'] as const,
   active: () => [...planKeys.all, 'active'] as const,
   byId: (id: string) => [...planKeys.all, id] as const,
+  byWeek: (weekStart: string) => [...planKeys.all, 'week', weekStart] as const,
   hydratedActive: () => [...planKeys.all, 'hydrated', 'active'] as const,
+  hydratedByWeek: (weekStart: string) => [...planKeys.all, 'hydrated', weekStart] as const,
 };
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
@@ -40,6 +43,23 @@ async function fetchActivePlan(): Promise<MealPlan | null> {
     .eq('status', 'active')
     .order('week_start', { ascending: false })
     .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapMealPlan(data) : null;
+}
+
+async function fetchPlanByWeek(weekStart: string): Promise<MealPlan | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return null;
+
+  const { data, error } = await supabase
+    .from('meal_plans')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .eq('week_start', weekStart)
     .maybeSingle();
 
   if (error) throw error;
@@ -114,7 +134,7 @@ export function useActivePlan() {
   return useQuery({
     queryKey: planKeys.active(),
     queryFn: fetchActivePlan,
-    staleTime: 1000 * 60 * 5, // 5 min — plan doesn't change often
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -129,6 +149,25 @@ export function useHydratedActivePlan() {
     queryKey: planKeys.hydratedActive(),
     queryFn: () => fetchHydratedPlan(plan!.id),
     enabled: !!plan?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * Fetches the plan for a specific week, fully hydrated.
+ * Returns null if no plan exists for that week.
+ */
+export function usePlanForWeek(weekStart: string) {
+  const planQuery = useQuery({
+    queryKey: planKeys.byWeek(weekStart),
+    queryFn: () => fetchPlanByWeek(weekStart),
+    staleTime: 1000 * 60 * 5,
+  });
+
+  return useQuery({
+    queryKey: planKeys.hydratedByWeek(weekStart),
+    queryFn: () => fetchHydratedPlan(planQuery.data!.id),
+    enabled: !!planQuery.data?.id,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -180,7 +219,6 @@ export function useGeneratePlan() {
         weekStart,
       }),
     onSuccess: () => {
-      // Invalidate all plan queries so the UI re-fetches
       queryClient.invalidateQueries({ queryKey: planKeys.all });
     },
   });
@@ -205,6 +243,64 @@ export function useSwapMeal() {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: planKeys.all });
+    },
+  });
+}
+
+/** Regenerates a single meal slot via the regenerate-meal Edge Function. */
+export function useRegenerateMeal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (plannedMealId: string) =>
+      invokeFunction<{ plannedMealId: string }, void>('regenerate-meal', { plannedMealId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: planKeys.all });
+    },
+  });
+}
+
+/** Updates the status of a planned meal with optimistic update. */
+export function useUpdateMealStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      plannedMealId,
+      status,
+    }: {
+      plannedMealId: string;
+      status: MealStatus;
+    }) => {
+      const { error } = await supabase
+        .from('planned_meals')
+        .update({ status })
+        .eq('id', plannedMealId);
+      if (error) throw error;
+    },
+    onMutate: async ({ plannedMealId, status }) => {
+      await queryClient.cancelQueries({ queryKey: planKeys.all });
+      queryClient.setQueriesData<HydratedPlan>(
+        { queryKey: planKeys.all },
+        (old) => {
+          if (!old || !old.days) return old;
+          return {
+            ...old,
+            days: old.days.map((day) => ({
+              ...day,
+              meals: day.meals.map((m) =>
+                m.id === plannedMealId ? { ...m, status } : m,
+              ),
+            })),
+          };
+        },
+      );
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: planKeys.all });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: planKeys.all });
     },
   });

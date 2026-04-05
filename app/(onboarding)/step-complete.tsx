@@ -9,12 +9,13 @@ import { supabase, invokeFunction } from '../../lib/supabase';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import type { PlanGenerationResult } from '../../types';
 
-type Step = 'idle' | 'saving' | 'generating' | 'scheduling' | 'done' | 'error';
+type Step = 'idle' | 'saving' | 'generating' | 'shopping' | 'scheduling' | 'done' | 'error';
 
 const STEP_LABELS: Record<Step, string> = {
   idle: 'Setting up...',
   saving: 'Saving your preferences...',
   generating: 'Generating your first meal plan...',
+  shopping: 'Building your shopping list...',
   scheduling: 'Scheduling reminders...',
   done: 'All done!',
   error: 'Something went wrong.',
@@ -22,9 +23,10 @@ const STEP_LABELS: Record<Step, string> = {
 
 const STEP_PROGRESS: Record<Step, number> = {
   idle: 0,
-  saving: 0.25,
-  generating: 0.6,
-  scheduling: 0.85,
+  saving: 0.2,
+  generating: 0.5,
+  shopping: 0.75,
+  scheduling: 0.9,
   done: 1,
   error: 0,
 };
@@ -55,6 +57,17 @@ export default function StepComplete() {
         { weekStart },
       );
       if (!result?.planId) throw new Error('Plan generation returned no data.');
+
+      // Auto-generate shopping list (non-fatal if it fails)
+      setCurrentStep('shopping');
+      try {
+        await invokeFunction<{ planId: string }, unknown>(
+          'generate-shopping-list',
+          { planId: result.planId },
+        );
+      } catch (shopErr) {
+        console.warn('[step-complete] shopping list generation failed (non-fatal):', shopErr);
+      }
 
       setCurrentStep('scheduling');
       // Request notification permission — non-fatal if denied
@@ -98,13 +111,14 @@ export default function StepComplete() {
       sex: store.sex,
       activity_level: store.activityLevel,
       dietary_restrictions: store.dietaryRestrictions,
+      liked_ingredients: store.likedIngredients,
       disliked_ingredients: store.dislikedIngredients,
       liked_cuisines: store.likedCuisines,
+      seasonality_importance: store.seasonalityImportance,
       managed_meal_slots: store.managedMealSlots,
       unmanaged_slot_calories: store.unmanagedSlotCalories,
       batch_cook_days: store.batchCookDays,
-      prefers_seasonal: false,
-      max_cook_time_minutes: store.maxCookTimeMinutes,
+      max_cook_time_minutes: 45,
       shopping_days: store.shoppingDays,
       pantry_staples: store.pantryStaples,
     }, { onConflict: 'user_id' });
@@ -133,7 +147,7 @@ export default function StepComplete() {
         {!isError && (
           <Text className="text-base text-[#6B7280] text-center">
             {isDone
-              ? 'Your first weekly plan is ready. Enjoy!'
+              ? 'Your first weekly plan and shopping list are ready!'
               : 'This only takes a moment...'}
           </Text>
         )}

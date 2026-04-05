@@ -34,6 +34,7 @@ const RecipeSchema = z.object({
   tags: z.array(z.string()),
   isSeasonal: z.boolean(),
   season: z.enum(['spring', 'summer', 'autumn', 'winter', 'all']),
+  estimatedPriceEur: z.number().nonnegative(),
 });
 
 const MealSlotSchema = z.object({
@@ -108,12 +109,28 @@ Deno.serve(async (req: Request) => {
       notes: row.notes,
     }));
 
+    // ── Load favourite dishes ─────────────────────────────────────────────────
+    const { data: favRows } = await supabase
+      .from('user_favorites')
+      .select('custom_name, recipes(title, cuisine)')
+      .eq('user_id', userId);
+
+    const favoriteDishes = (favRows ?? []).map((row) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = row as any;
+      return {
+        name: r.recipes?.title ?? r.custom_name ?? null,
+        cuisine: r.recipes?.cuisine ?? null,
+      };
+    }).filter((f) => f.name !== null);
+
     // ── Build Claude prompt ──────────────────────────────────────────────────
     const currentMonth = new Date(weekStart).toLocaleString('en-US', { month: 'long' });
     const userPrompt = buildPlanGenerationUserPrompt({
       weekStart,
       preferences: prefs,
       feedbackHistory,
+      favoriteDishes,
       currentMonth,
     });
 
@@ -250,6 +267,7 @@ async function upsertRecipe(
       tags: recipe.tags,
       is_seasonal: recipe.isSeasonal,
       season: recipe.season,
+      estimated_price_eur: recipe.estimatedPriceEur,
     })
     .select('id')
     .single();

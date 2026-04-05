@@ -1,9 +1,12 @@
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
+  Modal,
   ScrollView,
+  Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -13,7 +16,11 @@ import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { usePreferences, useProfile } from '../../hooks/useProfile';
 import { useGeneratePlan } from '../../hooks/usePlan';
+import { useGenerateShoppingList } from '../../hooks/useShoppingList';
+import { useFavorites, useAddCustomFavorite, useRemoveFavorite } from '../../hooks/useFavorites';
+import { useAutomations, useUpsertAutomation } from '../../hooks/useAutomations';
 import { signOut } from '../../lib/supabase';
+import type { SmsShareConfig } from '../../types';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -29,9 +36,32 @@ function getThisMonday(): string {
 export default function ProfileScreen() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: prefs, isLoading: prefsLoading } = usePreferences();
+  const { data: favorites = [], isLoading: favLoading } = useFavorites();
+  const { data: automations = [] } = useAutomations();
   const generatePlan = useGeneratePlan();
+  const generateList = useGenerateShoppingList();
+  const addCustomFavorite = useAddCustomFavorite();
+  const removeFavorite = useRemoveFavorite();
+  const upsertAutomation = useUpsertAutomation();
+
+  const [addFavModalVisible, setAddFavModalVisible] = useState(false);
+  const [newFavName, setNewFavName] = useState('');
+  const [smsContact, setSmsContact] = useState('');
+  const [smsNumber, setSmsNumber] = useState('');
 
   const isLoading = profileLoading || prefsLoading;
+
+  const remindersAuto = automations.find((a) => a.type === 'reminders_export');
+  const smsAuto = automations.find((a) => a.type === 'sms_share');
+
+  // Seed SMS fields from stored config
+  React.useEffect(() => {
+    if (smsAuto) {
+      const cfg = smsAuto.config as SmsShareConfig;
+      setSmsContact(cfg.contactName ?? '');
+      setSmsNumber(cfg.contactNumber ?? '');
+    }
+  }, [smsAuto]);
 
   function handleRegeneratePlan() {
     Alert.alert(
@@ -44,7 +74,10 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: () =>
             generatePlan.mutate(getThisMonday(), {
-              onSuccess: () => router.replace('/(tabs)'),
+              onSuccess: (result) => {
+                if (result?.planId) generateList.mutate(result.planId);
+                router.replace('/(tabs)');
+              },
             }),
         },
       ],
@@ -63,6 +96,38 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  }
+
+  function handleAddFavorite() {
+    const name = newFavName.trim();
+    if (!name) return;
+    addCustomFavorite.mutate({ customName: name });
+    setNewFavName('');
+    setAddFavModalVisible(false);
+  }
+
+  function toggleReminders(enabled: boolean) {
+    upsertAutomation.mutate({
+      type: 'reminders_export',
+      enabled,
+      config: { trigger: 'on_plan_generated' },
+    });
+  }
+
+  function toggleSms(enabled: boolean) {
+    upsertAutomation.mutate({
+      type: 'sms_share',
+      enabled,
+      config: { trigger: 'on_plan_generated', contactName: smsContact, contactNumber: smsNumber },
+    });
+  }
+
+  function saveSmsConfig() {
+    upsertAutomation.mutate({
+      type: 'sms_share',
+      enabled: smsAuto?.enabled ?? false,
+      config: { trigger: 'on_plan_generated', contactName: smsContact, contactNumber: smsNumber },
+    });
   }
 
   return (
@@ -166,10 +231,106 @@ export default function ProfileScreen() {
           </View>
           <EditLink
             label="Edit preferences"
-            onPress={() => router.push('/(onboarding)/step-preferences')}
+            onPress={() => router.push('/settings/preferences')}
           />
         </Card>
       )}
+
+      {/* Favourite Dishes */}
+      <SectionHeader title="Favourite dishes" />
+      {favLoading ? (
+        <Skeleton height={80} borderRadius={16} />
+      ) : (
+        <Card className="gap-3">
+          {favorites.length === 0 ? (
+            <Text className="text-sm text-[#9CA3AF]">No favourites yet.</Text>
+          ) : (
+            <View className="gap-2">
+              {favorites.map((fav) => (
+                <View key={fav.id} className="flex-row items-center justify-between">
+                  <Text className="text-sm text-[#1A1A2E] flex-1" numberOfLines={1}>
+                    {fav.recipe?.title ?? fav.customName ?? 'Unknown'}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => removeFavorite.mutate(fav.id)}
+                    hitSlop={8}
+                    className="ml-3"
+                  >
+                    <Text className="text-xs text-red-400">✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => setAddFavModalVisible(true)}
+            className="self-start active:opacity-70"
+          >
+            <Text className="text-xs font-semibold text-[#2D6A4F]">+ Add manually</Text>
+          </TouchableOpacity>
+        </Card>
+      )}
+
+      {/* Automations */}
+      <SectionHeader title="Automations" />
+      <Card className="gap-4">
+        {/* Reminders export */}
+        <View className="gap-1">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 mr-3">
+              <Text className="text-sm font-semibold text-[#1A1A2E]">
+                Apple Reminders
+              </Text>
+              <Text className="text-xs text-[#6B7280]">
+                Export shopping list when plan is generated
+              </Text>
+            </View>
+            <Switch
+              value={remindersAuto?.enabled ?? false}
+              onValueChange={toggleReminders}
+              trackColor={{ true: '#2D6A4F' }}
+            />
+          </View>
+        </View>
+
+        <View className="h-px bg-gray-100" />
+
+        {/* SMS share */}
+        <View className="gap-2">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 mr-3">
+              <Text className="text-sm font-semibold text-[#1A1A2E]">Send via SMS</Text>
+              <Text className="text-xs text-[#6B7280]">
+                Share shopping list when plan is generated
+              </Text>
+            </View>
+            <Switch
+              value={smsAuto?.enabled ?? false}
+              onValueChange={toggleSms}
+              trackColor={{ true: '#2D6A4F' }}
+            />
+          </View>
+          {(smsAuto?.enabled) && (
+            <View className="gap-2 pt-1">
+              <TextInput
+                className="rounded-xl border border-gray-200 bg-[#F8F9FA] px-4 py-3 text-sm text-[#1A1A2E]"
+                placeholder="Contact name"
+                value={smsContact}
+                onChangeText={setSmsContact}
+                onEndEditing={saveSmsConfig}
+              />
+              <TextInput
+                className="rounded-xl border border-gray-200 bg-[#F8F9FA] px-4 py-3 text-sm text-[#1A1A2E]"
+                placeholder="Phone number (e.g. +49123456789)"
+                value={smsNumber}
+                onChangeText={setSmsNumber}
+                keyboardType="phone-pad"
+                onEndEditing={saveSmsConfig}
+              />
+            </View>
+          )}
+        </View>
+      </Card>
 
       <SectionHeader title="Shopping" />
       {isLoading ? (
@@ -204,7 +365,7 @@ export default function ProfileScreen() {
           className="flex-row items-center justify-between py-2 active:opacity-70"
         >
           <Text className="text-sm font-semibold text-[#2D6A4F]">
-            {generatePlan.isPending ? 'Regenerating…' : 'Regenerate this week\'s plan'}
+            {generatePlan.isPending ? 'Regenerating…' : "Regenerate this week's plan"}
           </Text>
           <Text className="text-[#9CA3AF]">›</Text>
         </TouchableOpacity>
@@ -217,6 +378,43 @@ export default function ProfileScreen() {
           <Text className="text-[#9CA3AF]">›</Text>
         </TouchableOpacity>
       </Card>
+
+      {/* Add favourite modal */}
+      <Modal
+        visible={addFavModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddFavModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/40 items-center justify-center px-8">
+          <View className="bg-white rounded-2xl p-6 w-full gap-4">
+            <Text className="text-base font-bold text-[#1A1A2E]">Add favourite dish</Text>
+            <TextInput
+              className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-[#1A1A2E]"
+              placeholder="Dish name..."
+              value={newFavName}
+              onChangeText={setNewFavName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleAddFavorite}
+            />
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setAddFavModalVisible(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 items-center"
+              >
+                <Text className="text-sm font-semibold text-[#6B7280]">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleAddFavorite}
+                className="flex-1 py-3 rounded-xl bg-[#2D6A4F] items-center"
+              >
+                <Text className="text-sm font-semibold text-white">Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

@@ -21,6 +21,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { StarRating } from '../../components/ui/StarRating';
 import { useMealFeedback, useSubmitFeedback } from '../../hooks/useFeedback';
 import { usePlannedMeal } from '../../hooks/usePlan';
+import { useIsFavorite, useToggleFavorite } from '../../hooks/useFavorites';
 import { shareRecipe } from '../../lib/sharing';
 import { colors } from '../../constants/theme';
 import type { Recipe } from '../../types';
@@ -43,6 +44,7 @@ export default function MealDetailScreen() {
   const { data: meal, isLoading } = usePlannedMeal(id);
   const { data: existingFeedback } = useMealFeedback(id);
   const submitFeedback = useSubmitFeedback();
+  const toggleFavorite = useToggleFavorite();
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const { control, handleSubmit, reset, formState: { isDirty } } = useForm<FeedbackForm>({
@@ -108,6 +110,8 @@ export default function MealDetailScreen() {
   }
 
   const { recipe } = meal;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const isFavorite = useIsFavorite(recipe.id);
 
   return (
     <KeyboardAvoidingView
@@ -133,6 +137,15 @@ export default function MealDetailScreen() {
               label={meal.mealSlot.charAt(0).toUpperCase() + meal.mealSlot.slice(1)}
               variant="default"
             />
+            <View className="flex-1" />
+            <TouchableOpacity
+              onPress={() => toggleFavorite.mutate(recipe.id)}
+              hitSlop={8}
+              className="w-9 h-9 rounded-xl bg-white items-center justify-center active:opacity-70"
+              style={{ shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } }}
+            >
+              <Text className="text-lg">{isFavorite ? '⭐' : '☆'}</Text>
+            </TouchableOpacity>
           </View>
 
           <Text className="text-2xl font-bold text-[#1A1A2E]">{recipe.title}</Text>

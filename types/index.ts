@@ -26,6 +26,14 @@ export type PlanStatus = 'active' | 'archived';
 
 export type MealPlanStatus = 'active' | 'archived';
 
+export type MealStatus =
+  | 'recommended'
+  | 'planned'
+  | 'prepared'
+  | 'cooked'
+  | 'rated'
+  | 'skipped';
+
 // ─── Ingredient & shopping ───────────────────────────────────────────────────
 
 export interface Ingredient {
@@ -65,13 +73,14 @@ export interface UserPreferences {
   activityLevel: ActivityLevel | null;
   // Food preferences
   dietaryRestrictions: DietaryRestriction[];
+  likedIngredients: string[];
   dislikedIngredients: string[];
   likedCuisines: string[];
+  seasonalityImportance: 1 | 2 | 3 | 4 | 5;
   // Planning
   managedMealSlots: MealSlot[];
   unmanagedSlotCalories: Partial<Record<MealSlot, number>>; // e.g. { breakfast: 400 }
   batchCookDays: number; // 1 | 2 | 3
-  prefersSeasonalIngredients: boolean;
   maxCookTimeMinutes: number;
   // Shopping
   shoppingDays: number[]; // 0=Sunday … 6=Saturday
@@ -99,6 +108,7 @@ export interface Recipe {
   tags: string[];
   isSeasonal: boolean;
   season: Season;
+  estimatedPriceEur: number | null;
   createdAt: string;
 }
 
@@ -121,6 +131,7 @@ export interface PlannedMeal {
   alternativeRecipeId: string | null;
   chosenRecipeId: string | null; // null = using the default recipeId
   batchGroup: number | null;
+  status: MealStatus;
   createdAt: string;
 }
 
@@ -190,6 +201,7 @@ export interface ClaudeRecipeObject {
   tags: string[];
   isSeasonal: boolean;
   season: Season;
+  estimatedPriceEur: number;
 }
 
 export interface ClaudeMealSlotObject {
@@ -249,9 +261,10 @@ export interface OnboardingState {
   proteinTargetG: number | null;
   // Step 2 — Preferences
   dietaryRestrictions: DietaryRestriction[];
+  likedIngredients: string[];
   dislikedIngredients: string[];
   likedCuisines: string[];
-  maxCookTimeMinutes: number;
+  seasonalityImportance: 1 | 2 | 3 | 4 | 5;
   // Step 3 — Meal slots
   managedMealSlots: MealSlot[];
   unmanagedSlotCalories: Partial<Record<MealSlot, number>>;
@@ -261,6 +274,43 @@ export interface OnboardingState {
   pantryStaples: string[];
   // Step 6 — Shopping days
   shoppingDays: number[];
+}
+
+// ─── Favorites ───────────────────────────────────────────────────────────────
+
+export interface UserFavorite {
+  id: string;
+  userId: string;
+  recipeId: string | null;
+  recipe: Recipe | null; // hydrated when fetched with join
+  customName: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+// ─── Automations ─────────────────────────────────────────────────────────────
+
+export type AutomationType = 'reminders_export' | 'sms_share';
+
+export interface RemindersExportConfig {
+  trigger: 'on_plan_generated' | 'manual';
+}
+
+export interface SmsShareConfig {
+  trigger: 'on_plan_generated' | 'manual';
+  contactName: string;
+  contactNumber: string;
+}
+
+export type AutomationConfig = RemindersExportConfig | SmsShareConfig;
+
+export interface Automation {
+  id: string;
+  userId: string;
+  type: AutomationType;
+  enabled: boolean;
+  config: AutomationConfig;
+  createdAt: string;
 }
 
 // ─── Notifications ───────────────────────────────────────────────────────────

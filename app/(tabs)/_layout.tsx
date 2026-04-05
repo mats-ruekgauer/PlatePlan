@@ -30,7 +30,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'This Week',
+          title: 'Meal Plan',
           tabBarIcon: ({ focused }) => <TabIcon emoji="🗓️" focused={focused} />,
         }}
       />
@@ -41,11 +41,11 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="🛒" focused={focused} />,
         }}
       />
+      {/* Recipes — hidden until feature is ready */}
       <Tabs.Screen
         name="recipes"
         options={{
-          title: 'Recipes',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📖" focused={focused} />,
+          href: null,
         }}
       />
       <Tabs.Screen

@@ -2,13 +2,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type {
+  Automation,
+  AutomationType,
   MealFeedback,
   MealPlan,
+  MealStatus,
   PlannedMeal,
   Profile,
   Recipe,
   ReceiptItem,
   ShoppingList,
+  UserFavorite,
   UserPreferences,
 } from '../types';
 
@@ -52,8 +56,10 @@ export interface Database {
           sex: string | null;
           activity_level: string | null;
           dietary_restrictions: string[];
+          liked_ingredients: string[];
           disliked_ingredients: string[];
           liked_cuisines: string[];
+          seasonality_importance: number;
           managed_meal_slots: string[];
           unmanaged_slot_calories: Record<string, number> | null;
           batch_cook_days: number;
@@ -88,6 +94,7 @@ export interface Database {
           tags: string[];
           is_seasonal: boolean;
           season: string;
+          estimated_price_eur: number | null;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['recipes']['Row'], 'id' | 'created_at'>;
@@ -114,6 +121,7 @@ export interface Database {
           alternative_recipe_id: string | null;
           chosen_recipe_id: string | null;
           batch_group: number | null;
+          status: string;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['planned_meals']['Row'], 'id' | 'created_at'>;
@@ -160,6 +168,30 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['receipt_items']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['receipt_items']['Insert']>;
+      };
+      user_favorites: {
+        Row: {
+          id: string;
+          user_id: string;
+          recipe_id: string | null;
+          custom_name: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['user_favorites']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['user_favorites']['Insert']>;
+      };
+      automations: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: string;
+          enabled: boolean;
+          config: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['automations']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['automations']['Insert']>;
       };
     };
   };
@@ -239,13 +271,14 @@ export function mapUserPreferences(
     activityLevel: row.activity_level as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     dietaryRestrictions: (row.dietary_restrictions ?? []) as any[],
+    likedIngredients: row.liked_ingredients ?? [],
     dislikedIngredients: row.disliked_ingredients ?? [],
     likedCuisines: row.liked_cuisines ?? [],
+    seasonalityImportance: (row.seasonality_importance ?? 3) as 1 | 2 | 3 | 4 | 5,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     managedMealSlots: (row.managed_meal_slots ?? []) as any[],
     unmanagedSlotCalories: (row.unmanaged_slot_calories ?? {}) as Record<string, number>,
     batchCookDays: row.batch_cook_days,
-    prefersSeasonalIngredients: row.prefers_seasonal,
     maxCookTimeMinutes: row.max_cook_time_minutes,
     shoppingDays: row.shopping_days ?? [],
     pantryStaples: row.pantry_staples ?? [],
@@ -276,6 +309,7 @@ export function mapRecipe(
     isSeasonal: row.is_seasonal,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     season: row.season as any,
+    estimatedPriceEur: row.estimated_price_eur ?? null,
     createdAt: row.created_at,
   };
 }
@@ -306,6 +340,7 @@ export function mapPlannedMeal(
     alternativeRecipeId: row.alternative_recipe_id,
     chosenRecipeId: row.chosen_recipe_id,
     batchGroup: row.batch_group,
+    status: (row.status ?? 'recommended') as MealStatus,
     createdAt: row.created_at,
   };
 }
@@ -352,6 +387,35 @@ export function mapReceiptItem(
     priceEur: row.price_eur,
     supermarket: row.supermarket,
     purchasedAt: row.purchased_at,
+    createdAt: row.created_at,
+  };
+}
+
+export function mapUserFavorite(
+  row: Database['public']['Tables']['user_favorites']['Row'] & { recipes?: Database['public']['Tables']['recipes']['Row'] | null },
+): UserFavorite {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    recipeId: row.recipe_id,
+    recipe: row.recipes ? mapRecipe(row.recipes) : null,
+    customName: row.custom_name,
+    notes: row.notes,
+    createdAt: row.created_at,
+  };
+}
+
+export function mapAutomation(
+  row: Database['public']['Tables']['automations']['Row'],
+): Automation {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type: row.type as any,
+    enabled: row.enabled,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    config: row.config as any,
     createdAt: row.created_at,
   };
 }

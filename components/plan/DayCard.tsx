@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 
 import { MealSlot } from './MealSlot';
 import { MealSlotSkeleton } from '../ui/Skeleton';
-import type { HydratedMeal } from '../../types';
+import type { HydratedMeal, MealStatus } from '../../types';
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -12,6 +12,10 @@ interface DayCardProps {
   meals: HydratedMeal[];
   isToday?: boolean;
   onLongPressMeal?: (meal: HydratedMeal) => void;
+  onStatusChange?: (meal: HydratedMeal, newStatus: MealStatus) => void;
+  onApprove?: (meal: HydratedMeal) => void;
+  onSkip?: (meal: HydratedMeal) => void;
+  onRegenerate?: (meal: HydratedMeal) => void;
   loading?: boolean;
 }
 
@@ -20,19 +24,13 @@ export function DayCard({
   meals,
   isToday = false,
   onLongPressMeal,
+  onStatusChange,
+  onApprove,
+  onSkip,
+  onRegenerate,
   loading = false,
 }: DayCardProps) {
   const dayName = DAY_NAMES[dayOfWeek] ?? `Day ${dayOfWeek}`;
-
-  // Show feedback badge on meals whose mealtime has passed today
-  function shouldShowFeedbackBadge(meal: HydratedMeal): boolean {
-    if (!isToday) return false;
-    const now = new Date();
-    if (meal.mealSlot === 'dinner' && now.getHours() >= 19) return true;
-    if (meal.mealSlot === 'lunch' && now.getHours() >= 14) return true;
-    if (meal.mealSlot === 'breakfast' && now.getHours() >= 10) return true;
-    return false;
-  }
 
   return (
     <View className="gap-2">
@@ -61,8 +59,11 @@ export function DayCard({
             <MealSlot
               key={meal.id}
               meal={meal}
-              showFeedbackBadge={shouldShowFeedbackBadge(meal)}
               onLongPress={() => onLongPressMeal?.(meal)}
+              onStatusChange={onStatusChange}
+              onApprove={onApprove}
+              onSkip={onSkip}
+              onRegenerate={onRegenerate}
             />
           ))
         ) : (

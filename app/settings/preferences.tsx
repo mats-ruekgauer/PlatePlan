@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { OnboardingProgress } from '../../components/onboarding/OnboardingProgress';
 import { Button } from '../../components/ui/Button';
+import { supabase } from '../../lib/supabase';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import type { DietaryRestriction } from '../../types';
 
@@ -33,10 +33,35 @@ const SEASONALITY_LABELS = ['None', 'Low', 'Some', 'High', 'Always'];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function StepPreferences() {
+export default function EditPreferences() {
   const store = useOnboardingStore();
   const [likedInput, setLikedInput] = useState('');
   const [dislikedInput, setDislikedInput] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Load current preferences from DB on mount and populate store
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single();
+
+      if (!data) return;
+
+      // Populate store fields that this screen manages
+      store.setDietaryRestrictions(data.dietary_restrictions ?? []);
+      store.setLikedIngredients(data.liked_ingredients ?? []);
+      store.setDislikedIngredients(data.disliked_ingredients ?? []);
+      store.setLikedCuisines(data.liked_cuisines ?? []);
+      store.setSeasonalityImportance((data.seasonality_importance ?? 3) as 1 | 2 | 3 | 4 | 5);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function addLiked() {
     const trimmed = likedInput.trim();
@@ -52,18 +77,46 @@ export default function StepPreferences() {
     setDislikedInput('');
   }
 
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('user_preferences')
+        .update({
+          dietary_restrictions: store.dietaryRestrictions,
+          liked_ingredients: store.likedIngredients,
+          disliked_ingredients: store.dislikedIngredients,
+          liked_cuisines: store.likedCuisines,
+          seasonality_importance: store.seasonalityImportance,
+        })
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+      router.back();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <ScrollView
       className="flex-1 bg-[#F8F9FA]"
       contentContainerClassName="px-5 pt-14 pb-8 gap-6"
     >
-      <OnboardingProgress currentStep={2} totalSteps={7} />
-
-      <View className="gap-1">
-        <Text className="text-3xl font-bold text-[#1A1A2E]">Your preferences</Text>
-        <Text className="text-base text-[#6B7280]">
-          Tell us what you eat and how you like to cook.
-        </Text>
+      {/* Header with back button */}
+      <View className="flex-row items-center gap-3">
+        <Pressable onPress={() => router.back()} className="w-10 h-10 rounded-full bg-white border border-gray-200 items-center justify-center">
+          <Text className="text-lg">←</Text>
+        </Pressable>
+        <View className="gap-0.5 flex-1">
+          <Text className="text-2xl font-bold text-[#1A1A2E]">Food preferences</Text>
+          <Text className="text-sm text-[#6B7280]">Changes apply to future meal plans</Text>
+        </View>
       </View>
 
       {/* Dietary restrictions */}
@@ -94,9 +147,7 @@ export default function StepPreferences() {
       {/* Favourite ingredients */}
       <View className="gap-3">
         <Text className="text-base font-semibold text-[#1A1A2E]">Favourite ingredients</Text>
-        <Text className="text-sm text-[#6B7280] -mt-1">
-          We'll try to include these in your meals.
-        </Text>
+        <Text className="text-sm text-[#6B7280] -mt-1">We'll try to include these in your meals.</Text>
         <View className="flex-row gap-2">
           <TextInput
             className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
@@ -167,9 +218,7 @@ export default function StepPreferences() {
       {/* Favourite cuisines */}
       <View className="gap-3">
         <Text className="text-base font-semibold text-[#1A1A2E]">Favourite cuisines</Text>
-        <Text className="text-sm text-[#6B7280] -mt-1">
-          Select any you enjoy — we'll prioritise these.
-        </Text>
+        <Text className="text-sm text-[#6B7280] -mt-1">Select any you enjoy — we'll prioritise these.</Text>
         <View className="flex-row flex-wrap gap-2">
           {CUISINE_OPTIONS.map((opt) => {
             const selected = store.likedCuisines.includes(opt.label);
@@ -229,7 +278,13 @@ export default function StepPreferences() {
         </View>
       </View>
 
-      <Button label="Continue" onPress={() => router.push('/(onboarding)/step-meal-slots')} />
+      {saving ? (
+        <View className="h-12 items-center justify-center">
+          <ActivityIndicator color="#2D6A4F" />
+        </View>
+      ) : (
+        <Button label="Save" onPress={handleSave} />
+      )}
     </ScrollView>
   );
 }

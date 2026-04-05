@@ -39,7 +39,8 @@ RecipeObject structure:
   "cuisine": string,
   "tags": string[],
   "isSeasonal": boolean,
-  "season": "spring" | "summer" | "autumn" | "winter" | "all"
+  "season": "spring" | "summer" | "autumn" | "winter" | "all",
+  "estimatedPriceEur": number  // estimated cost per serving in EUR (rough estimate is fine)
 }
 
 Rules:
@@ -49,17 +50,21 @@ Rules:
 - Respect maxCookTimeMinutes
 - If batchCookDays > 1, group recipes so the same dish appears across consecutive days and scale servings accordingly
 - Prefer liked cuisines
-- If prefersSeasonalIngredients is true, favour seasonal produce for the current month
+- liked_ingredients lists ingredients the user enjoys — incorporate them where appropriate and naturally
+- seasonality_importance is a 1–5 scale (1=ignore seasons entirely, 5=strictly seasonal produce only). Adjust ingredient seasonality accordingly for the current month.
 - Do not repeat any recipe that has a wouldRepeat=false feedback entry
 - Prefer recipes with high taste ratings from feedback history
 - Vary cuisines across the week — do not repeat the same cuisine on consecutive days
-- Include pantryStaples implicitly (do not list them as ingredients in the shopping list)\
+- Include pantryStaples implicitly (do not list them as ingredients in the shopping list)
+- estimatedPriceEur should be a realistic per-serving cost estimate in EUR; use 0 if genuinely unknown
+- favoriteDishes is a list of the user's all-time favourite meals — include them or very similar dishes more frequently (aim for at least 1-2 per week if the list is non-empty)\
 `;
 
 export function buildPlanGenerationUserPrompt(params: {
   weekStart: string;
   preferences: object;
   feedbackHistory: object[];
+  favoriteDishes: object[];
   currentMonth: string;
 }): string {
   return `\
@@ -69,6 +74,9 @@ ${JSON.stringify(params.preferences, null, 2)}
 
 Feedback history (use this to avoid disliked meals and favour liked ones):
 ${JSON.stringify(params.feedbackHistory, null, 2)}
+
+Favourite dishes (include these or very similar dishes at least 1-2 times this week):
+${JSON.stringify(params.favoriteDishes, null, 2)}
 
 Current month: ${params.currentMonth} (use for seasonal logic)\
 `;

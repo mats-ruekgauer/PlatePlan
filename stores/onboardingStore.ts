@@ -43,9 +43,10 @@ const initialState: OnboardingState = {
   proteinTargetG: null,
   // Step 2 — Preferences
   dietaryRestrictions: [],
+  likedIngredients: [],
   dislikedIngredients: [],
   likedCuisines: [],
-  maxCookTimeMinutes: 45,
+  seasonalityImportance: 3,
   // Step 3 — Meal slots
   managedMealSlots: ['dinner'],
   unmanagedSlotCalories: {},
@@ -75,10 +76,16 @@ interface OnboardingActions {
 
   // Step 2
   toggleDietaryRestriction: (restriction: DietaryRestriction) => void;
+  setDietaryRestrictions: (restrictions: DietaryRestriction[]) => void;
+  addLikedIngredient: (ingredient: string) => void;
+  removeLikedIngredient: (ingredient: string) => void;
+  setLikedIngredients: (ingredients: string[]) => void;
   addDislikedIngredient: (ingredient: string) => void;
   removeDislikedIngredient: (ingredient: string) => void;
+  setDislikedIngredients: (ingredients: string[]) => void;
   toggleLikedCuisine: (cuisine: string) => void;
-  setMaxCookTimeMinutes: (minutes: number) => void;
+  setLikedCuisines: (cuisines: string[]) => void;
+  setSeasonalityImportance: (value: 1 | 2 | 3 | 4 | 5) => void;
 
   // Step 3
   toggleManagedMealSlot: (slot: MealSlot) => void;
@@ -124,6 +131,26 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
             : [...s.dietaryRestrictions, restriction],
         })),
 
+      setDietaryRestrictions: (restrictions) => set({ dietaryRestrictions: restrictions }),
+
+      setLikedIngredients: (ingredients) => set({ likedIngredients: ingredients }),
+
+      setDislikedIngredients: (ingredients) => set({ dislikedIngredients: ingredients }),
+
+      setLikedCuisines: (cuisines) => set({ likedCuisines: cuisines }),
+
+      addLikedIngredient: (ingredient) =>
+        set((s) => {
+          const normalised = ingredient.trim().toLowerCase();
+          if (!normalised || s.likedIngredients.includes(normalised)) return s;
+          return { likedIngredients: [...s.likedIngredients, normalised] };
+        }),
+
+      removeLikedIngredient: (ingredient) =>
+        set((s) => ({
+          likedIngredients: s.likedIngredients.filter((i) => i !== ingredient),
+        })),
+
       addDislikedIngredient: (ingredient) =>
         set((s) => {
           const normalised = ingredient.trim().toLowerCase();
@@ -143,7 +170,7 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
             : [...s.likedCuisines, cuisine],
         })),
 
-      setMaxCookTimeMinutes: (maxCookTimeMinutes) => set({ maxCookTimeMinutes }),
+      setSeasonalityImportance: (seasonalityImportance) => set({ seasonalityImportance }),
 
       // ── Step 3 ──────────────────────────────────────────────────────────────
       toggleManagedMealSlot: (slot) =>
@@ -194,7 +221,7 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
         })),
 
       // ── Utility ─────────────────────────────────────────────────────────────
-      reset: () => set({ ...initialState, hasCompletedOnboarding: true, pantryStaples: [...DEFAULT_PANTRY_STAPLES] }),
+      reset: () => set({ ...initialState, hasCompletedOnboarding: true, pantryStaples: [...DEFAULT_PANTRY_STAPLES], likedIngredients: [], dislikedIngredients: [] }),
     }),
     {
       name: 'plateplan-onboarding',
