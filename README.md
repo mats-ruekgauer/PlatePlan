@@ -163,6 +163,33 @@ Aggregates all ingredients from a plan's recipes, deduplicates, groups by catego
 
 ---
 
+## Roadmap
+
+### 🐛 Bug Fixes (current)
+- [ ] Generate new week doesn't work
+- [ ] View meal doesn't work
+- [ ] Edit preferences doesn't work
+- [ ] Shopping list doesn't work
+
+### ✨ New Features
+- [ ] **Households vs Accounts** — shared planning for families / flatmates
+- [ ] **Equipment** — user specifies available kitchen equipment; affects recipe suggestions
+- [ ] **Meal plan layout overhaul** — combine status + Approve/Skip into one button; integrate shopping list view into meal plan
+- [ ] **Price per ingredient** — show cost breakdown at ingredient level, not just per serving
+- [ ] **Preferences: processed ingredients** — slider for how much pre-processed / convenience food is acceptable
+- [ ] **Dish list** — browse all generated recipes in one place
+
+### 🔁 Ongoing
+- [ ] Fix bugs (post-feature)
+- [ ] Extensive testing
+
+### 🚀 Launch Milestones
+- [ ] **Private go-live** — get the app running and approved on the App Store
+- [ ] **Friends & family go-live** — limited rollout for feedback
+- [ ] **Public go-live**
+
+---
+
 ## License
 
 MIT
