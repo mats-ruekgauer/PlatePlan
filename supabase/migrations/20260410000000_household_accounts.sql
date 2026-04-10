@@ -34,8 +34,14 @@ create table public.household_invites (
 
 -- ── Modify meal_plans ─────────────────────────────────────────────────────────
 
+-- Drop column with CASCADE to remove any dependent RLS policies automatically
 alter table public.meal_plans
-  drop column if exists user_id,
+  drop column if exists user_id cascade;
+
+-- Clear existing rows — they reference the old user_id scheme and cannot be migrated
+delete from public.meal_plans;
+
+alter table public.meal_plans
   add column household_id uuid not null references public.households(id) on delete cascade;
 
 -- Replace old unique constraint (user_id, week_start) with (household_id, week_start)
@@ -47,8 +53,14 @@ alter table public.meal_plans
 
 -- ── Modify shopping_lists ─────────────────────────────────────────────────────
 
+-- Drop column with CASCADE to remove any dependent RLS policies automatically
 alter table public.shopping_lists
-  drop column if exists user_id,
+  drop column if exists user_id cascade;
+
+-- Clear existing rows for the same reason
+delete from public.shopping_lists;
+
+alter table public.shopping_lists
   add column household_id uuid not null references public.households(id) on delete cascade;
 
 -- ── RLS: households ───────────────────────────────────────────────────────────

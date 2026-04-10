@@ -3,12 +3,11 @@
 // Shows a confirmation screen before joining the household.
 
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
 import { useJoinHousehold } from '../../hooks/useHousehold';
-import { useGeneratePlan } from '../../hooks/usePlan';
 import { invokeFunction } from '../../lib/supabase';
 import type { PlanGenerationResult } from '../../types';
 

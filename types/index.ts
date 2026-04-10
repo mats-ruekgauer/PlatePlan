@@ -328,21 +328,27 @@ export interface Household {
   updatedAt: string;
 }
 
+export type HouseholdMemberStatus = 'active' | 'pending';
+
 export interface HouseholdMember {
   id: string;
   householdId: string;
   userId: string;
   displayName: string | null;  // joined from profiles
   role: HouseholdRole;
+  status: HouseholdMemberStatus;
   joinedAt: string;
 }
 
 export interface HouseholdInvite {
   id: string;
   householdId: string;
-  token: string;
+  /** SHA-256 hash of the raw token. The raw token is only sent to the client, never stored. */
+  tokenHash: string;
   createdBy: string;
   expiresAt: string;
+  usageLimit: number | null;   // null = unlimited
+  usesCount: number;
   createdAt: string;
 }
 

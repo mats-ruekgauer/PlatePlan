@@ -85,7 +85,10 @@ export function useCreateHousehold() {
       shoppingDays: number[];
       batchCookDays: number;
     }) =>
-      invokeFunction<typeof params, { householdId: string }>('create-household', params),
+      invokeFunction<typeof params, { householdId: string; inviteLink: string }>(
+        'create-household',
+        params,
+      ),
     onSuccess: (data) => {
       setActiveHouseholdId(data.householdId);
       queryClient.invalidateQueries({ queryKey: householdKeys.mine() });
@@ -113,18 +116,17 @@ export function useJoinHousehold() {
   });
 }
 
-/** Generates a share link for a household and opens the native share sheet. */
+/** Regenerates an invite link for a household (invalidates old) and opens the share sheet. */
 export function useShareInvite() {
   return useMutation({
     mutationFn: async (householdId: string) => {
-      const result = await invokeFunction<{ householdId: string }, { token: string }>(
-        'create-invite',
-        { householdId },
-      );
-      const link = `plateplan://invite/${result.token}`;
+      const result = await invokeFunction<
+        { householdId: string },
+        { inviteLink: string; expiresAt: string }
+      >('create-invite', { householdId });
       await Share.share({
-        message: `Join my household on PlatePlan! ${link}`,
-        url: link,
+        message: `Join my household on PlatePlan! ${result.inviteLink}`,
+        url: result.inviteLink,
       });
     },
   });

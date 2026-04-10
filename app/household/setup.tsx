@@ -6,6 +6,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -13,19 +14,8 @@ import { Button } from '../../components/ui/Button';
 import { invokeFunction } from '../../lib/supabase';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useHouseholdStore } from '../../stores/householdStore';
-import type { PlanGenerationResult } from '../../types';
 
 type Mode = 'choose' | 'create' | 'join';
-
-/** Returns the ISO date string for the most recent Monday. */
-function getThisMonday(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split('T')[0];
-}
 
 export default function StepHousehold() {
   const store = useOnboardingStore();
@@ -33,7 +23,7 @@ export default function StepHousehold() {
 
   const [mode, setMode] = useState<Mode>('choose');
   const [householdName, setHouseholdName] = useState('My Household');
-  const [inviteToken, setInviteToken] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState('');
 
@@ -47,7 +37,7 @@ export default function StepHousehold() {
       setStatusText('Creating household...');
       const result = await invokeFunction<
         { name: string; managedMealSlots: string[]; shoppingDays: number[]; batchCookDays: number },
-        { householdId: string }
+        { householdId: string; inviteLink: string }
       >('create-household', {
         name: householdName.trim(),
         managedMealSlots: store.managedMealSlots,
@@ -56,26 +46,6 @@ export default function StepHousehold() {
       });
 
       setActiveHouseholdId(result.householdId);
-
-      setStatusText('Generating your first meal plan...');
-      const planResult = await invokeFunction<
-        { weekStart: string; householdId: string },
-        PlanGenerationResult
-      >('generate-plan', {
-        weekStart: getThisMonday(),
-        householdId: result.householdId,
-      });
-
-      if (planResult?.planId) {
-        setStatusText('Building your shopping list...');
-        await invokeFunction<{ planId: string }, unknown>(
-          'generate-shopping-list',
-          { planId: planResult.planId },
-        ).catch(() => null);
-      }
-
-      setStatusText('Done!');
-      await delay(400);
       store.reset();
       router.replace('/(tabs)');
     } catch (err) {
@@ -87,14 +57,15 @@ export default function StepHousehold() {
   }
 
   async function handleJoin() {
-    if (!inviteToken.trim()) {
-      Alert.alert('Token required', 'Please paste your invite link or code.');
+    const raw = inviteCode.trim();
+    if (!raw) {
+      Alert.alert('Code required', 'Please paste your invite link or enter a code.');
       return;
     }
     setLoading(true);
     try {
-      // Support both full deep links and raw tokens
-      const token = inviteToken.trim().replace(/^.*plateplan:\/\/invite\//i, '');
+      // Strip the deep-link prefix if the user pasted the full link
+      const token = raw.replace(/^.*plateplan:\/\/invite\//i, '');
 
       setStatusText('Joining household...');
       const result = await invokeFunction<
@@ -103,26 +74,6 @@ export default function StepHousehold() {
       >('join-household', { token });
 
       setActiveHouseholdId(result.householdId);
-
-      setStatusText('Generating your first meal plan...');
-      const planResult = await invokeFunction<
-        { weekStart: string; householdId: string },
-        PlanGenerationResult
-      >('generate-plan', {
-        weekStart: getThisMonday(),
-        householdId: result.householdId,
-      });
-
-      if (planResult?.planId) {
-        setStatusText('Building your shopping list...');
-        await invokeFunction<{ planId: string }, unknown>(
-          'generate-shopping-list',
-          { planId: planResult.planId },
-        ).catch(() => null);
-      }
-
-      setStatusText('Done!');
-      await delay(400);
       store.reset();
       router.replace('/(tabs)');
     } catch (err) {
@@ -147,76 +98,86 @@ export default function StepHousehold() {
       className="flex-1 bg-[#F8F9FA]"
       contentContainerClassName="px-5 pt-14 pb-8 gap-8"
     >
-      {/* Header */}
-      <View className="gap-2">
-        <Text className="text-3xl font-bold text-[#1A1A2E]">Set up your household</Text>
-        <Text className="text-base text-[#6B7280]">
-          Meal plans are shared with your household. Create one or join an existing one.
-        </Text>
-      </View>
+      {/* Back button */}
+      {mode !== 'choose' && (
+        <TouchableOpacity
+          onPress={() => setMode('choose')}
+          className="self-start"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text className="text-[#2D6A4F] text-base font-medium">← Back</Text>
+        </TouchableOpacity>
+      )}
 
       {mode === 'choose' && (
-        <View className="gap-4">
-          <Button
-            label="Create a new household"
-            onPress={() => setMode('create')}
-          />
-          <Button
-            label="Join with an invite link"
-            variant="secondary"
-            onPress={() => setMode('join')}
-          />
-        </View>
+        <>
+          <View className="gap-2">
+            <Text className="text-3xl font-bold text-[#1A1A2E]">Set up your household</Text>
+            <Text className="text-base text-[#6B7280]">
+              Meal plans are shared with your household. Create one or join an existing one.
+            </Text>
+          </View>
+          <View className="gap-4">
+            <Button label="Create a new household" onPress={() => setMode('create')} />
+            <Button
+              label="Join with a code or link"
+              variant="secondary"
+              onPress={() => setMode('join')}
+            />
+          </View>
+        </>
       )}
 
       {mode === 'create' && (
-        <View className="gap-6">
+        <>
           <View className="gap-2">
-            <Text className="text-sm font-medium text-[#1A1A2E]">Household name</Text>
-            <TextInput
-              className="bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 text-base text-[#1A1A2E]"
-              value={householdName}
-              onChangeText={setHouseholdName}
-              placeholder="e.g. Our Home"
-              autoFocus
-              maxLength={50}
-            />
+            <Text className="text-3xl font-bold text-[#1A1A2E]">Create your household</Text>
+            <Text className="text-base text-[#6B7280]">
+              Give your household a name to get started.
+            </Text>
           </View>
-          <Button label="Create & generate plan" onPress={handleCreate} />
-          <Button
-            label="Back"
-            variant="secondary"
-            onPress={() => setMode('choose')}
-          />
-        </View>
+          <View className="gap-6">
+            <View className="gap-2">
+              <Text className="text-sm font-medium text-[#1A1A2E]">Household name</Text>
+              <TextInput
+                className="bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 text-base text-[#1A1A2E]"
+                value={householdName}
+                onChangeText={setHouseholdName}
+                placeholder="e.g. Our Home"
+                autoFocus
+                maxLength={50}
+              />
+            </View>
+            <Button label="Create household" onPress={handleCreate} />
+          </View>
+        </>
       )}
 
       {mode === 'join' && (
-        <View className="gap-6">
+        <>
           <View className="gap-2">
-            <Text className="text-sm font-medium text-[#1A1A2E]">Invite link or code</Text>
-            <TextInput
-              className="bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 text-base text-[#1A1A2E]"
-              value={inviteToken}
-              onChangeText={setInviteToken}
-              placeholder="Paste invite link here"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-            />
+            <Text className="text-3xl font-bold text-[#1A1A2E]">Join a household</Text>
+            <Text className="text-base text-[#6B7280]">
+              Paste the invite link or enter the code you received.
+            </Text>
           </View>
-          <Button label="Join & generate plan" onPress={handleJoin} />
-          <Button
-            label="Back"
-            variant="secondary"
-            onPress={() => setMode('choose')}
-          />
-        </View>
+          <View className="gap-6">
+            <View className="gap-2">
+              <Text className="text-sm font-medium text-[#1A1A2E]">Invite link or code</Text>
+              <TextInput
+                className="bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 text-base text-[#1A1A2E]"
+                value={inviteCode}
+                onChangeText={setInviteCode}
+                placeholder="Paste link or enter code"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+              />
+            </View>
+            <Button label="Join household" onPress={handleJoin} />
+          </View>
+        </>
       )}
     </ScrollView>
   );
-}
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }

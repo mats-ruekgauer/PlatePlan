@@ -215,21 +215,24 @@ export interface Database {
           household_id: string;
           user_id: string;
           role: string;
+          status: string;
           joined_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['household_members']['Row'], 'id' | 'joined_at'>;
+        Insert: Omit<Database['public']['Tables']['household_members']['Row'], 'id' | 'joined_at' | 'status'>;
         Update: Partial<Database['public']['Tables']['household_members']['Insert']>;
       };
       household_invites: {
         Row: {
           id: string;
           household_id: string;
-          token: string;
+          token_hash: string;
           created_by: string;
           expires_at: string;
+          usage_limit: number | null;
+          uses_count: number;
           created_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['household_invites']['Row'], 'id' | 'created_at'>;
+        Insert: Omit<Database['public']['Tables']['household_invites']['Row'], 'id' | 'created_at' | 'uses_count'>;
         Update: Partial<Database['public']['Tables']['household_invites']['Insert']>;
       };
     };
@@ -485,6 +488,8 @@ export function mapHouseholdMember(
     displayName: row.profiles?.display_name ?? null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     role: row.role as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    status: (row.status ?? 'active') as any,
     joinedAt: row.joined_at,
   };
 }
