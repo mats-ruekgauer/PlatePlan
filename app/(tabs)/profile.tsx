@@ -14,9 +14,11 @@ import {
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useMyHouseholds, useShareInvite } from '../../hooks/useHousehold';
 import { usePreferences, useProfile } from '../../hooks/useProfile';
 import { useGeneratePlan } from '../../hooks/usePlan';
 import { useGenerateShoppingList } from '../../hooks/useShoppingList';
+import { useHouseholdStore } from '../../stores/householdStore';
 import { useFavorites, useAddCustomFavorite, useRemoveFavorite } from '../../hooks/useFavorites';
 import { useAutomations, useUpsertAutomation } from '../../hooks/useAutomations';
 import { signOut } from '../../lib/supabase';
@@ -38,11 +40,15 @@ export default function ProfileScreen() {
   const { data: prefs, isLoading: prefsLoading } = usePreferences();
   const { data: favorites = [], isLoading: favLoading } = useFavorites();
   const { data: automations = [] } = useAutomations();
+  const { data: households = [], isLoading: householdsLoading } = useMyHouseholds();
   const generatePlan = useGeneratePlan();
   const generateList = useGenerateShoppingList();
   const addCustomFavorite = useAddCustomFavorite();
   const removeFavorite = useRemoveFavorite();
   const upsertAutomation = useUpsertAutomation();
+  const shareInvite = useShareInvite();
+  const activeHouseholdId = useHouseholdStore((s) => s.activeHouseholdId);
+  const setActiveHouseholdId = useHouseholdStore((s) => s.setActiveHouseholdId);
 
   const [addFavModalVisible, setAddFavModalVisible] = useState(false);
   const [newFavName, setNewFavName] = useState('');
@@ -353,6 +359,56 @@ export default function ProfileScreen() {
             label="Edit shopping days"
             onPress={() => router.push('/(onboarding)/step-shopping-days')}
           />
+        </Card>
+      )}
+
+      {/* Households */}
+      <SectionHeader title="Households" />
+      {householdsLoading ? (
+        <Skeleton height={80} borderRadius={16} />
+      ) : (
+        <Card className="gap-2">
+          {households.map((hh, idx) => (
+            <View key={hh.id}>
+              {idx > 0 && <View className="h-px bg-gray-100" />}
+              <TouchableOpacity
+                onPress={() => router.push(`/household/${hh.id}`)}
+                className="flex-row items-center justify-between py-2 active:opacity-70"
+              >
+                <View className="flex-row items-center gap-2 flex-1">
+                  <Text className="text-sm font-semibold text-[#1A1A2E]" numberOfLines={1}>
+                    {hh.name}
+                  </Text>
+                  {hh.id === activeHouseholdId && (
+                    <Text className="text-xs text-[#2D6A4F] font-medium">Active</Text>
+                  )}
+                </View>
+                <View className="flex-row items-center gap-3">
+                  {hh.id !== activeHouseholdId && (
+                    <TouchableOpacity
+                      onPress={() => setActiveHouseholdId(hh.id)}
+                      className="px-2 py-1 rounded-lg bg-[#D8F3DC]"
+                    >
+                      <Text className="text-xs text-[#2D6A4F] font-semibold">Switch</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => shareInvite.mutate(hh.id)}
+                    className="px-2 py-1 rounded-lg border border-[#E5E7EB]"
+                  >
+                    <Text className="text-xs text-[#6B7280]">Invite</Text>
+                  </TouchableOpacity>
+                  <Text className="text-[#9CA3AF]">›</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            onPress={() => router.push('/(onboarding)/step-household')}
+            className="pt-1 active:opacity-70"
+          >
+            <Text className="text-xs font-semibold text-[#2D6A4F]">+ New household</Text>
+          </TouchableOpacity>
         </Card>
       )}
 

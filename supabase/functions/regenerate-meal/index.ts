@@ -6,6 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 
 import { PLAN_GENERATION_SYSTEM_PROMPT } from '../_shared/prompts.ts';
+import { mergePreferences } from '../_shared/mergePreferences.ts';
 
 // ─── Zod schemas (same as generate-plan) ─────────────────────────────────────
 
@@ -78,7 +79,15 @@ Deno.serve(async (req: Request) => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const plan = (plannedMeal as any).meal_plans;
-    if (plan.user_id !== userId) return errorResponse('Forbidden', 403);
+
+    // Verify caller is a member of the household that owns this plan
+    const { data: membership } = await supabase
+      .from('household_members')
+      .select('id')
+      .eq('household_id', plan.household_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!membership) return errorResponse('Forbidden', 403);
 
     // ── Load all other meal titles in this plan (to avoid duplicates) ────────
     const { data: existingMeals } = await supabase
@@ -92,12 +101,20 @@ Deno.serve(async (req: Request) => {
       .map((m: any) => m.recipes?.title)
       .filter(Boolean) as string[];
 
-    // ── Load user preferences ─────────────────────────────────────────────────
-    const { data: prefs } = await supabase
+    // ── Load all household member preferences and merge ───────────────────────
+    const { data: members } = await supabase
+      .from('household_members')
+      .select('user_id')
+      .eq('household_id', plan.household_id);
+
+    const memberUserIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
+
+    const { data: allPrefs } = await supabase
       .from('user_preferences')
       .select('*')
-      .eq('user_id', userId)
-      .single();
+      .in('user_id', memberUserIds.length ? memberUserIds : [userId]);
+
+    const prefs = allPrefs?.length ? mergePreferences(allPrefs) : {};
 
     // ── Build Claude prompt ──────────────────────────────────────────────────
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

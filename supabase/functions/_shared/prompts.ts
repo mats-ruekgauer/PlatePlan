@@ -66,9 +66,14 @@ export function buildPlanGenerationUserPrompt(params: {
   feedbackHistory: object[];
   favoriteDishes: object[];
   currentMonth: string;
+  memberCount?: number;
 }): string {
+  const householdNote = params.memberCount && params.memberCount > 1
+    ? `\nThis plan is for a household of ${params.memberCount} people. Scale all recipe servings accordingly.`
+    : '';
+
   return `\
-Generate a weekly meal plan starting Monday ${params.weekStart} for a user with these preferences:
+Generate a weekly meal plan starting Monday ${params.weekStart} for a user with these preferences:${householdNote}
 
 ${JSON.stringify(params.preferences, null, 2)}
 
