@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, GestureResponderEvent, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
 import { supabase } from '../../lib/supabase';
@@ -292,29 +292,13 @@ export default function EditPreferences() {
         <Text className="text-sm text-[#6B7280] -mt-1">
           How much do you prefer cooking from raw ingredients?
         </Text>
-        <View className="flex-row gap-1">
-          {([1, 2, 3, 4, 5] as const).map((val) => (
-            <Pressable
-              key={val}
-              onPress={() => store.setCookFromScratchPreference(val)}
-              className={[
-                'flex-1 py-2 rounded-lg items-center',
-                val <= store.cookFromScratchPreference
-                  ? val === store.cookFromScratchPreference
-                    ? 'bg-[#2D6A4F]'
-                    : 'bg-[#52B788]'
-                  : 'bg-gray-200',
-              ].join(' ')}
-            >
-              <Text
-                className={`text-sm font-bold ${
-                  val <= store.cookFromScratchPreference ? 'text-white' : 'text-gray-400'
-                }`}
-              >
-                {val}
-              </Text>
-            </Pressable>
-          ))}
+        <ScratchSlider
+          value={store.cookFromScratchPreference}
+          onChange={store.setCookFromScratchPreference}
+        />
+        <View className="flex-row justify-between">
+          <Text className="text-xs text-[#9CA3AF]">Convenience</Text>
+          <Text className="text-xs text-[#9CA3AF]">Always scratch</Text>
         </View>
       </View>
 
@@ -326,5 +310,72 @@ export default function EditPreferences() {
         <Button label="Save" onPress={handleSave} />
       )}
     </ScrollView>
+  );
+}
+
+// ─── Scratch Slider ───────────────────────────────────────────────────────────
+
+function ScratchSlider({
+  value,
+  onChange,
+}: {
+  value: 1 | 2 | 3 | 4 | 5;
+  onChange: (v: 1 | 2 | 3 | 4 | 5) => void;
+}) {
+  const [trackWidth, setTrackWidth] = useState(0);
+
+  function resolveValue(x: number): 1 | 2 | 3 | 4 | 5 {
+    if (trackWidth === 0) return value;
+    const ratio = Math.max(0, Math.min(1, x / trackWidth));
+    return (Math.round(ratio * 4) + 1) as 1 | 2 | 3 | 4 | 5;
+  }
+
+  function handleResponder(e: GestureResponderEvent) {
+    onChange(resolveValue(e.nativeEvent.locationX));
+  }
+
+  const fillPct = ((value - 1) / 4) * 100;
+  const thumbPct = fillPct;
+
+  return (
+    <View
+      className="py-3 justify-center"
+      onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={handleResponder}
+      onResponderMove={handleResponder}
+    >
+      {/* Track */}
+      <View className="h-1.5 bg-gray-200 rounded-full">
+        <View
+          className="h-full bg-[#2D6A4F] rounded-full"
+          style={{ width: `${fillPct}%` }}
+        />
+      </View>
+      {/* Tick marks */}
+      <View className="absolute left-0 right-0 flex-row justify-between px-0 top-[18px]">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <View
+            key={i}
+            className="w-1 h-1 rounded-full"
+            style={{ backgroundColor: i <= value - 1 ? '#2D6A4F' : '#D1D5DB' }}
+          />
+        ))}
+      </View>
+      {/* Thumb */}
+      <View
+        className="absolute w-5 h-5 bg-[#2D6A4F] rounded-full border-2 border-white"
+        style={{
+          top: 9,
+          left: `${thumbPct}%`,
+          transform: [{ translateX: -10 }],
+          shadowColor: '#000',
+          shadowOpacity: 0.15,
+          shadowRadius: 3,
+          shadowOffset: { width: 0, height: 1 },
+          elevation: 2,
+        }}
+      />
+    </View>
   );
 }
