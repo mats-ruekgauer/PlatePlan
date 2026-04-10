@@ -7,12 +7,12 @@ import {
   mapRecipe,
   supabase,
 } from '../lib/supabase';
+import { useHouseholdStore } from '../stores/householdStore';
 import type {
   HydratedMeal,
   HydratedPlan,
   MealPlan,
   MealStatus,
-  PlannedMeal,
   PlanGenerationResult,
   Recipe,
 } from '../types';
@@ -21,25 +21,22 @@ import type {
 
 export const planKeys = {
   all: ['plans'] as const,
-  active: () => [...planKeys.all, 'active'] as const,
+  byHousehold: (householdId: string) => [...planKeys.all, householdId] as const,
+  active: (householdId: string) => [...planKeys.all, householdId, 'active'] as const,
   byId: (id: string) => [...planKeys.all, id] as const,
-  byWeek: (weekStart: string) => [...planKeys.all, 'week', weekStart] as const,
-  hydratedActive: () => [...planKeys.all, 'hydrated', 'active'] as const,
-  hydratedByWeek: (weekStart: string) => [...planKeys.all, 'hydrated', weekStart] as const,
+  byWeek: (householdId: string, weekStart: string) => [...planKeys.all, householdId, 'week', weekStart] as const,
+  hydratedActive: (householdId: string) => [...planKeys.all, householdId, 'hydrated', 'active'] as const,
+  hydratedByWeek: (householdId: string, weekStart: string) => [...planKeys.all, householdId, 'hydrated', weekStart] as const,
 };
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
-async function fetchActivePlan(): Promise<MealPlan | null> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) return null;
-
+async function fetchActivePlan(householdId: string): Promise<MealPlan | null> {
   const { data, error } = await supabase
     .from('meal_plans')
     .select('*')
-    .eq('user_id', session.user.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .eq('household_id' as any, householdId)
     .eq('status', 'active')
     .order('week_start', { ascending: false })
     .limit(1)
@@ -49,16 +46,12 @@ async function fetchActivePlan(): Promise<MealPlan | null> {
   return data ? mapMealPlan(data) : null;
 }
 
-async function fetchPlanByWeek(weekStart: string): Promise<MealPlan | null> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) return null;
-
+async function fetchPlanByWeek(householdId: string, weekStart: string): Promise<MealPlan | null> {
   const { data, error } = await supabase
     .from('meal_plans')
     .select('*')
-    .eq('user_id', session.user.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .eq('household_id' as any, householdId)
     .eq('week_start', weekStart)
     .maybeSingle();
 
@@ -67,7 +60,6 @@ async function fetchPlanByWeek(weekStart: string): Promise<MealPlan | null> {
 }
 
 async function fetchHydratedPlan(planId: string): Promise<HydratedPlan | null> {
-  // Load planned meals with both recipe and alternative recipe in one query
   const { data: rows, error } = await supabase
     .from('planned_meals')
     .select(`
@@ -82,7 +74,6 @@ async function fetchHydratedPlan(planId: string): Promise<HydratedPlan | null> {
   if (error) throw error;
   if (!rows || rows.length === 0) return null;
 
-  // Fetch the plan metadata separately
   const { data: planRow, error: planError } = await supabase
     .from('meal_plans')
     .select('*')
@@ -92,7 +83,6 @@ async function fetchHydratedPlan(planId: string): Promise<HydratedPlan | null> {
 
   const plan = mapMealPlan(planRow);
 
-  // Group meals by day
   const dayMap = new Map<number, HydratedMeal[]>();
 
   for (const row of rows) {
@@ -129,11 +119,14 @@ async function fetchHydratedPlan(planId: string): Promise<HydratedPlan | null> {
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
-/** Fetches the user's current active meal plan (metadata only). */
+/** Fetches the active household's current meal plan (metadata only). */
 export function useActivePlan() {
+  const householdId = useHouseholdStore((s) => s.activeHouseholdId);
+
   return useQuery({
-    queryKey: planKeys.active(),
-    queryFn: fetchActivePlan,
+    queryKey: householdId ? planKeys.active(householdId) : planKeys.all,
+    queryFn: () => fetchActivePlan(householdId!),
+    enabled: !!householdId,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -143,12 +136,13 @@ export function useActivePlan() {
  * Waits for `useActivePlan` to resolve before fetching meals.
  */
 export function useHydratedActivePlan() {
+  const householdId = useHouseholdStore((s) => s.activeHouseholdId);
   const { data: plan } = useActivePlan();
 
   return useQuery({
-    queryKey: planKeys.hydratedActive(),
+    queryKey: householdId ? planKeys.hydratedActive(householdId) : planKeys.all,
     queryFn: () => fetchHydratedPlan(plan!.id),
-    enabled: !!plan?.id,
+    enabled: !!plan?.id && !!householdId,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -158,16 +152,19 @@ export function useHydratedActivePlan() {
  * Returns null if no plan exists for that week.
  */
 export function usePlanForWeek(weekStart: string) {
+  const householdId = useHouseholdStore((s) => s.activeHouseholdId);
+
   const planQuery = useQuery({
-    queryKey: planKeys.byWeek(weekStart),
-    queryFn: () => fetchPlanByWeek(weekStart),
+    queryKey: householdId ? planKeys.byWeek(householdId, weekStart) : planKeys.all,
+    queryFn: () => fetchPlanByWeek(householdId!, weekStart),
+    enabled: !!householdId,
     staleTime: 1000 * 60 * 5,
   });
 
   return useQuery({
-    queryKey: planKeys.hydratedByWeek(weekStart),
+    queryKey: householdId ? planKeys.hydratedByWeek(householdId, weekStart) : planKeys.all,
     queryFn: () => fetchHydratedPlan(planQuery.data!.id),
-    enabled: !!planQuery.data?.id,
+    enabled: !!planQuery.data?.id && !!householdId,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -209,15 +206,19 @@ export function usePlannedMeal(plannedMealId: string) {
   });
 }
 
-/** Generates a new weekly plan via Edge Function. */
+/** Generates a new weekly plan for the active household via Edge Function. */
 export function useGeneratePlan() {
   const queryClient = useQueryClient();
+  const householdId = useHouseholdStore((s) => s.activeHouseholdId);
 
   return useMutation({
-    mutationFn: (weekStart: string) =>
-      invokeFunction<{ weekStart: string }, PlanGenerationResult>('generate-plan', {
-        weekStart,
-      }),
+    mutationFn: (weekStart: string) => {
+      if (!householdId) throw new Error('No active household');
+      return invokeFunction<{ weekStart: string; householdId: string }, PlanGenerationResult>(
+        'generate-plan',
+        { weekStart, householdId },
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: planKeys.all });
     },

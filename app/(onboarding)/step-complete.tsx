@@ -1,21 +1,18 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { requestNotificationPermission } from '../../lib/notifications';
-import { supabase, invokeFunction } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { useOnboardingStore } from '../../stores/onboardingStore';
-import type { PlanGenerationResult } from '../../types';
 
-type Step = 'idle' | 'saving' | 'generating' | 'shopping' | 'scheduling' | 'done' | 'error';
+type Step = 'idle' | 'saving' | 'scheduling' | 'done' | 'error';
 
 const STEP_LABELS: Record<Step, string> = {
   idle: 'Setting up...',
   saving: 'Saving your preferences...',
-  generating: 'Generating your first meal plan...',
-  shopping: 'Building your shopping list...',
   scheduling: 'Scheduling reminders...',
   done: 'All done!',
   error: 'Something went wrong.',
@@ -23,10 +20,8 @@ const STEP_LABELS: Record<Step, string> = {
 
 const STEP_PROGRESS: Record<Step, number> = {
   idle: 0,
-  saving: 0.2,
-  generating: 0.5,
-  shopping: 0.75,
-  scheduling: 0.9,
+  saving: 0.4,
+  scheduling: 0.8,
   done: 1,
   error: 0,
 };
@@ -38,7 +33,6 @@ export default function StepComplete() {
   const hasStarted = useRef(false);
 
   useEffect(() => {
-    // Prevent double-run in React StrictMode / fast refresh
     if (hasStarted.current) return;
     hasStarted.current = true;
     run();
@@ -50,37 +44,13 @@ export default function StepComplete() {
       setCurrentStep('saving');
       await savePreferences();
 
-      setCurrentStep('generating');
-      const weekStart = getThisMonday();
-      const result = await invokeFunction<{ weekStart: string }, PlanGenerationResult>(
-        'generate-plan',
-        { weekStart },
-      );
-      if (!result?.planId) throw new Error('Plan generation returned no data.');
-
-      // Auto-generate shopping list (non-fatal if it fails)
-      setCurrentStep('shopping');
-      try {
-        await invokeFunction<{ planId: string }, unknown>(
-          'generate-shopping-list',
-          { planId: result.planId },
-        );
-      } catch (shopErr) {
-        console.warn('[step-complete] shopping list generation failed (non-fatal):', shopErr);
-      }
-
       setCurrentStep('scheduling');
-      // Request notification permission — non-fatal if denied
       await requestNotificationPermission().catch(() => null);
 
       setCurrentStep('done');
 
-      // Small delay so the user sees the "done" state before navigation
-      await delay(800);
-      router.replace('/(tabs)');
-      // Reset after navigation so AuthGuard doesn't see onboardingComplete = false
-      await delay(500);
-      store.reset();
+      await delay(600);
+      router.replace('/(onboarding)/step-household');
     } catch (err) {
       const message =
         err instanceof Error
@@ -134,26 +104,24 @@ export default function StepComplete() {
       className="flex-1 bg-[#F8F9FA]"
       contentContainerClassName="flex-1 px-5 pt-14 pb-8 justify-center gap-8"
     >
-      {/* Header */}
       <View className="items-center gap-3">
-        <Text className="text-5xl">{isDone ? '🎉' : isError ? '😕' : '⏳'}</Text>
+        <Text className="text-5xl">{isDone ? '✅' : isError ? '😕' : '⏳'}</Text>
         <Text className="text-2xl font-bold text-[#1A1A2E] text-center">
           {isDone
-            ? "You're all set!"
+            ? 'Preferences saved!'
             : isError
             ? 'Something went wrong'
-            : 'Getting everything ready'}
+            : 'Saving your preferences'}
         </Text>
         {!isError && (
           <Text className="text-base text-[#6B7280] text-center">
             {isDone
-              ? 'Your first weekly plan and shopping list are ready!'
+              ? "Now let's set up your household."
               : 'This only takes a moment...'}
           </Text>
         )}
       </View>
 
-      {/* Progress area */}
       {isLoading && (
         <View className="gap-4">
           <ProgressBar value={STEP_PROGRESS[currentStep]} height={10} animated />
@@ -197,14 +165,4 @@ export default function StepComplete() {
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-/** Returns the ISO date string for the most recent Monday (or today if Monday). */
-function getThisMonday(): string {
-  const now = new Date();
-  const day = now.getDay(); // 0=Sun, 1=Mon, …
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split('T')[0];
 }

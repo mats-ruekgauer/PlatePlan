@@ -13,6 +13,7 @@ import {
 import { DayCard } from '../../components/plan/DayCard';
 import { MealSwapper } from '../../components/plan/MealSwapper';
 import { DayCardSkeleton } from '../../components/ui/Skeleton';
+import { useMyHouseholds } from '../../hooks/useHousehold';
 import {
   useGeneratePlan,
   usePlanForWeek,
@@ -20,6 +21,7 @@ import {
   useUpdateMealStatus,
 } from '../../hooks/usePlan';
 import { useGenerateShoppingList } from '../../hooks/useShoppingList';
+import { useHouseholdStore } from '../../stores/householdStore';
 import type { HydratedMeal, MealStatus } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -60,6 +62,10 @@ export default function MealPlanScreen() {
   const [atTop, setAtTop] = useState(true);
   const [atBottom, setAtBottom] = useState(false);
   const [swappingMeal, setSwappingMeal] = useState<HydratedMeal | null>(null);
+
+  const activeHouseholdId = useHouseholdStore((s) => s.activeHouseholdId);
+  const { data: households } = useMyHouseholds();
+  const activeHousehold = households?.find((h) => h.id === activeHouseholdId);
 
   const { data: plan, isLoading, refetch, isRefetching } = usePlanForWeek(viewingWeekStart);
   const generatePlan = useGeneratePlan();
@@ -151,7 +157,9 @@ export default function MealPlanScreen() {
         <View className="flex-row items-center justify-between">
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
-              <Text className="text-2xl font-bold text-[#1A1A2E]">Meal Plan</Text>
+              <Text className="text-2xl font-bold text-[#1A1A2E]">
+                {activeHousehold?.name ?? 'Meal Plan'}
+              </Text>
               {!isCurrentWeek && (
                 <TouchableOpacity onPress={() => setViewingWeekStart(getThisMonday())}>
                   <Text className="text-sm font-semibold text-[#2D6A4F]">← Today</Text>

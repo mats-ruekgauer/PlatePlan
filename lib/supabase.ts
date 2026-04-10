@@ -4,6 +4,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type {
   Automation,
   AutomationType,
+  Household,
+  HouseholdMember,
   MealFeedback,
   MealPlan,
   MealStatus,
@@ -103,7 +105,7 @@ export interface Database {
       meal_plans: {
         Row: {
           id: string;
-          user_id: string;
+          household_id: string;
           week_start: string;
           status: string;
           generated_at: string;
@@ -130,7 +132,7 @@ export interface Database {
       shopping_lists: {
         Row: {
           id: string;
-          user_id: string;
+          household_id: string;
           plan_id: string | null;
           shopping_date: string | null;
           items: unknown; // JSONB — cast at read time
@@ -192,6 +194,43 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['automations']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['automations']['Insert']>;
+      };
+      households: {
+        Row: {
+          id: string;
+          name: string;
+          created_by: string;
+          managed_meal_slots: string[];
+          shopping_days: number[];
+          batch_cook_days: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['households']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['households']['Insert']>;
+      };
+      household_members: {
+        Row: {
+          id: string;
+          household_id: string;
+          user_id: string;
+          role: string;
+          joined_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['household_members']['Row'], 'id' | 'joined_at'>;
+        Update: Partial<Database['public']['Tables']['household_members']['Insert']>;
+      };
+      household_invites: {
+        Row: {
+          id: string;
+          household_id: string;
+          token: string;
+          created_by: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['household_invites']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['household_invites']['Insert']>;
       };
     };
   };
@@ -319,7 +358,7 @@ export function mapMealPlan(
 ): MealPlan {
   return {
     id: row.id,
-    userId: row.user_id,
+    householdId: row.household_id,
     weekStart: row.week_start,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: row.status as any,
@@ -350,7 +389,7 @@ export function mapShoppingList(
 ): ShoppingList {
   return {
     id: row.id,
-    userId: row.user_id,
+    householdId: row.household_id,
     planId: row.plan_id,
     shoppingDate: row.shopping_date,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -417,6 +456,36 @@ export function mapAutomation(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     config: row.config as any,
     createdAt: row.created_at,
+  };
+}
+
+export function mapHousehold(
+  row: Database['public']['Tables']['households']['Row'],
+): Household {
+  return {
+    id: row.id,
+    name: row.name,
+    createdBy: row.created_by,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    managedMealSlots: (row.managed_meal_slots ?? []) as any[],
+    shoppingDays: row.shopping_days ?? [],
+    batchCookDays: row.batch_cook_days ?? 1,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function mapHouseholdMember(
+  row: Database['public']['Tables']['household_members']['Row'] & { profiles?: Database['public']['Tables']['profiles']['Row'] | null },
+): HouseholdMember {
+  return {
+    id: row.id,
+    householdId: row.household_id,
+    userId: row.user_id,
+    displayName: row.profiles?.display_name ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    role: row.role as any,
+    joinedAt: row.joined_at,
   };
 }
 

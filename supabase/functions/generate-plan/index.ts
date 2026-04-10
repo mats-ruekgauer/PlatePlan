@@ -9,6 +9,7 @@ import {
   buildPlanGenerationUserPrompt,
   PLAN_GENERATION_SYSTEM_PROMPT,
 } from '../_shared/prompts.ts';
+import { mergePreferences } from '../_shared/mergePreferences.ts';
 
 // ─── Zod schemas for Claude response validation ───────────────────────────────
 
@@ -73,31 +74,60 @@ Deno.serve(async (req: Request) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    // Pass the JWT explicitly so getUser() validates it against the Auth API
     const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
     if (authError || !user) return errorResponse(`Unauthorized: ${authError?.message}`, 401);
     const userId = user.id;
 
     // ── Input ────────────────────────────────────────────────────────────────
-    const body = await req.json() as { weekStart: string };
-    const weekStart: string = body.weekStart;
+    const body = await req.json() as { weekStart: string; householdId: string };
+    const { weekStart, householdId } = body;
+
     if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
       return errorResponse('weekStart must be an ISO date string (YYYY-MM-DD)', 400);
     }
+    if (!householdId) {
+      return errorResponse('householdId is required', 400);
+    }
 
-    // ── Load preferences ─────────────────────────────────────────────────────
-    const { data: prefs, error: prefsError } = await supabase
+    // ── Verify caller is a member of this household ──────────────────────────
+    const { data: membership } = await supabase
+      .from('household_members')
+      .select('id')
+      .eq('household_id', householdId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) return errorResponse('Forbidden: not a member of this household', 403);
+
+    // ── Load all member user IDs ─────────────────────────────────────────────
+    const { data: members, error: membersError } = await supabase
+      .from('household_members')
+      .select('user_id')
+      .eq('household_id', householdId);
+
+    if (membersError || !members?.length) {
+      return errorResponse('Failed to load household members', 500);
+    }
+
+    const memberUserIds = members.map((m: { user_id: string }) => m.user_id);
+
+    // ── Load all members' preferences ────────────────────────────────────────
+    const { data: allPrefs, error: prefsError } = await supabase
       .from('user_preferences')
       .select('*')
-      .eq('user_id', userId)
-      .single();
-    if (prefsError || !prefs) return errorResponse('User preferences not found', 404);
+      .in('user_id', memberUserIds);
 
-    // ── Load last 10 feedback entries ────────────────────────────────────────
+    if (prefsError || !allPrefs?.length) {
+      return errorResponse('No preferences found for household members', 404);
+    }
+
+    const mergedPrefs = mergePreferences(allPrefs);
+
+    // ── Load last 10 feedback entries across all members ─────────────────────
     const { data: feedbackRows } = await supabase
       .from('meal_feedback')
       .select('recipe_id, taste_rating, portion_rating, would_repeat, notes, recipes(title)')
-      .eq('user_id', userId)
+      .in('user_id', memberUserIds)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -109,11 +139,11 @@ Deno.serve(async (req: Request) => {
       notes: row.notes,
     }));
 
-    // ── Load favourite dishes ─────────────────────────────────────────────────
+    // ── Load favourite dishes across all members ──────────────────────────────
     const { data: favRows } = await supabase
       .from('user_favorites')
       .select('custom_name, recipes(title, cuisine)')
-      .eq('user_id', userId);
+      .in('user_id', memberUserIds);
 
     const favoriteDishes = (favRows ?? []).map((row) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,28 +158,28 @@ Deno.serve(async (req: Request) => {
     const currentMonth = new Date(weekStart).toLocaleString('en-US', { month: 'long' });
     const userPrompt = buildPlanGenerationUserPrompt({
       weekStart,
-      preferences: prefs,
+      preferences: mergedPrefs,
       feedbackHistory,
       favoriteDishes,
       currentMonth,
+      memberCount: mergedPrefs.memberCount,
     });
 
     // ── Call Claude (with retry) ─────────────────────────────────────────────
     const plan = await callClaudeWithRetry(userPrompt);
 
     // ── Persist to DB ────────────────────────────────────────────────────────
-    // Use service-role client for inserts so RLS doesn't block Edge Function writes
     const serviceClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Upsert meal plan row
+    // Upsert meal plan row keyed by household_id + week_start
     const { data: mealPlan, error: planError } = await serviceClient
       .from('meal_plans')
       .upsert(
-        { user_id: userId, week_start: weekStart, status: 'active' },
-        { onConflict: 'user_id,week_start' },
+        { household_id: householdId, week_start: weekStart, status: 'active' },
+        { onConflict: 'household_id,week_start' },
       )
       .select()
       .single();
@@ -159,9 +189,8 @@ Deno.serve(async (req: Request) => {
 
     for (const day of plan.days) {
       for (const mealSlot of day.meals) {
-        // Insert primary recipe
+        // Insert primary recipe (scoped to household creator for dedup)
         const primaryRecipeId = await upsertRecipe(serviceClient, userId, mealSlot.recipe);
-        // Insert alternative recipe
         const altRecipeId = await upsertRecipe(serviceClient, userId, mealSlot.alternativeRecipe);
 
         const { data: pm, error: pmError } = await serviceClient
@@ -213,7 +242,6 @@ async function callClaudeWithRetry(userPrompt: string, maxAttempts = 3): Promise
       const rawText =
         message.content[0].type === 'text' ? message.content[0].text : '';
 
-      // Strip any accidental markdown code fences
       const cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
       const parsed: unknown = JSON.parse(cleaned);
@@ -239,7 +267,6 @@ async function upsertRecipe(
   userId: string,
   recipe: z.infer<typeof RecipeSchema>,
 ): Promise<string> {
-  // Check if a recipe with the same title already exists for this user
   const { data: existing } = await client
     .from('recipes')
     .select('id')
