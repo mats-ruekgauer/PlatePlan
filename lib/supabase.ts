@@ -519,22 +519,35 @@ export async function uploadReceiptImage(
 
 // ─── Edge Function invoker ────────────────────────────────────────────────────
 
-/** Typed wrapper around Supabase Edge Functions that throws on error. */
+/**
+ * Typed wrapper around Supabase Edge Functions.
+ * Uses raw fetch so the full JSON error body is always readable.
+ */
 export async function invokeFunction<TBody, TResponse>(
   name: string,
   body: TBody,
 ): Promise<TResponse> {
-  const { data, error } = await supabase.functions.invoke<TResponse>(name, { body });
-  if (error) {
-    // Extract the real error message from the function's JSON response body
-    let detail = error.message;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const errBody = await (error as any).context?.json?.();
-      if (errBody?.error) detail = errBody.error;
-    } catch { /* ignore – fall back to SDK message */ }
-    console.error(`[invokeFunction] ${name} failed:`, detail);
-    throw new Error(detail);
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token ?? supabaseAnonKey;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'apikey': supabaseAnonKey!,
+    },
+    body: JSON.stringify(body),
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await response.json();
+
+  if (!response.ok) {
+    const message: string = data?.error ?? `${name} failed (HTTP ${response.status})`;
+    console.warn(`[invokeFunction] ${name}:`, message);
+    throw new Error(message);
   }
+
   return data as TResponse;
 }
