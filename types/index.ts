@@ -77,6 +77,7 @@ export interface UserPreferences {
   dislikedIngredients: string[];
   likedCuisines: string[];
   seasonalityImportance: 1 | 2 | 3 | 4 | 5;
+  cookFromScratchPreference: 1 | 2 | 3 | 4 | 5;
   // Planning
   managedMealSlots: MealSlot[];
   unmanagedSlotCalories: Partial<Record<MealSlot, number>>; // e.g. { breakfast: 400 }
@@ -265,6 +266,7 @@ export interface OnboardingState {
   dislikedIngredients: string[];
   likedCuisines: string[];
   seasonalityImportance: 1 | 2 | 3 | 4 | 5;
+  cookFromScratchPreference: 1 | 2 | 3 | 4 | 5;
   // Step 3 — Meal slots
   managedMealSlots: MealSlot[];
   unmanagedSlotCalories: Partial<Record<MealSlot, number>>;

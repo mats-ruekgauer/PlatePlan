@@ -47,6 +47,7 @@ const initialState: OnboardingState = {
   dislikedIngredients: [],
   likedCuisines: [],
   seasonalityImportance: 3,
+  cookFromScratchPreference: 3,
   // Step 3 — Meal slots
   managedMealSlots: ['dinner'],
   unmanagedSlotCalories: {},

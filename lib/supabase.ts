@@ -276,6 +276,13 @@ export function mapUserPreferences(
     likedCuisines: row.liked_cuisines ?? [],
     seasonalityImportance: (row.seasonality_importance ?? 3) as 1 | 2 | 3 | 4 | 5,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cookFromScratchPreference: ((row as any).cook_from_scratch_preference ?? 3) as
+      | 1
+      | 2
+      | 3
+      | 4
+      | 5,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     managedMealSlots: (row.managed_meal_slots ?? []) as any[],
     unmanagedSlotCalories: (row.unmanaged_slot_calories ?? {}) as Record<string, number>,
     batchCookDays: row.batch_cook_days,
