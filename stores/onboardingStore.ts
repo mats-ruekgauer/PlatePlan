@@ -87,6 +87,7 @@ interface OnboardingActions {
   toggleLikedCuisine: (cuisine: string) => void;
   setLikedCuisines: (cuisines: string[]) => void;
   setSeasonalityImportance: (value: 1 | 2 | 3 | 4 | 5) => void;
+  setCookFromScratchPreference: (value: 1 | 2 | 3 | 4 | 5) => void;
 
   // Step 3
   toggleManagedMealSlot: (slot: MealSlot) => void;
@@ -172,6 +173,8 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
         })),
 
       setSeasonalityImportance: (seasonalityImportance) => set({ seasonalityImportance }),
+      setCookFromScratchPreference: (cookFromScratchPreference) =>
+        set({ cookFromScratchPreference }),
 
       // ── Step 3 ──────────────────────────────────────────────────────────────
       toggleManagedMealSlot: (slot) =>

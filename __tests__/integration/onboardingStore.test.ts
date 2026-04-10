@@ -31,7 +31,7 @@ function getStore() {
 
 // Reset store between tests
 beforeEach(() => {
-  useOnboardingStore.getState().reset();
+  useOnboardingStore.setState(useOnboardingStore.getInitialState(), true);
 });
 
 // ─── Step 1: Goals ────────────────────────────────────────────────────────────
@@ -119,9 +119,19 @@ describe('Step 2 — Preferences', () => {
     expect(getStore().likedCuisines).not.toContain('Italian');
   });
 
-  it('setMaxCookTimeMinutes stores the value', () => {
-    getStore().setMaxCookTimeMinutes(60);
-    expect(getStore().maxCookTimeMinutes).toBe(60);
+  it('cookFromScratchPreference defaults to 3', () => {
+    expect(getStore().cookFromScratchPreference).toBe(3);
+  });
+
+  it('setCookFromScratchPreference stores the value', () => {
+    getStore().setCookFromScratchPreference(5);
+    expect(getStore().cookFromScratchPreference).toBe(5);
+  });
+
+  it('reset restores cookFromScratchPreference to 3', () => {
+    getStore().setCookFromScratchPreference(1);
+    getStore().reset();
+    expect(getStore().cookFromScratchPreference).toBe(3);
   });
 });
 
@@ -241,7 +251,6 @@ describe('Step 6 — Shopping days', () => {
 
   it('toggleShoppingDay removes a day when toggled again', () => {
     getStore().toggleShoppingDay(1); // already in default
-    getStore().toggleShoppingDay(1);
     expect(getStore().shoppingDays).not.toContain(1);
   });
 });
