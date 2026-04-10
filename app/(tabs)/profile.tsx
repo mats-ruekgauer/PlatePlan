@@ -404,7 +404,7 @@ export default function ProfileScreen() {
             </View>
           ))}
           <TouchableOpacity
-            onPress={() => router.push('/(onboarding)/step-household')}
+            onPress={() => router.push('/household/setup')}
             className="pt-1 active:opacity-70"
           >
             <Text className="text-xs font-semibold text-[#2D6A4F]">+ New household</Text>

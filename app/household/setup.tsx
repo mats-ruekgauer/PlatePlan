@@ -13,7 +13,6 @@ import { Button } from '../../components/ui/Button';
 import { invokeFunction } from '../../lib/supabase';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useHouseholdStore } from '../../stores/householdStore';
-import { useGeneratePlan } from '../../hooks/usePlan';
 import type { PlanGenerationResult } from '../../types';
 
 type Mode = 'choose' | 'create' | 'join';
@@ -31,7 +30,6 @@ function getThisMonday(): string {
 export default function StepHousehold() {
   const store = useOnboardingStore();
   const setActiveHouseholdId = useHouseholdStore((s) => s.setActiveHouseholdId);
-  const generatePlan = useGeneratePlan();
 
   const [mode, setMode] = useState<Mode>('choose');
   const [householdName, setHouseholdName] = useState('My Household');
