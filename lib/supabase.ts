@@ -521,33 +521,24 @@ export async function uploadReceiptImage(
 
 /**
  * Typed wrapper around Supabase Edge Functions.
- * Uses raw fetch so the full JSON error body is always readable.
+ * Uses supabase.functions.invoke() so auth is handled by the SDK,
+ * but extracts the real error message from the JSON response body.
  */
 export async function invokeFunction<TBody, TResponse>(
   name: string,
   body: TBody,
 ): Promise<TResponse> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token ?? supabaseAnonKey;
-
-  const response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      'apikey': supabaseAnonKey!,
-    },
-    body: JSON.stringify(body),
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data: any = await response.json();
-
-  if (!response.ok) {
-    const message: string = data?.error ?? `${name} failed (HTTP ${response.status})`;
+  const { data, error } = await supabase.functions.invoke<TResponse>(name, { body });
+  if (error) {
+    let message = error.message;
+    try {
+      // FunctionsHttpError.context is the raw Response — body not yet consumed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errBody = await (error as any).context?.json?.();
+      if (errBody?.error) message = errBody.error;
+    } catch { /* fall back to SDK message */ }
     console.warn(`[invokeFunction] ${name}:`, message);
     throw new Error(message);
   }
-
   return data as TResponse;
 }
