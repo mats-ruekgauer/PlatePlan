@@ -4,7 +4,7 @@
 
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
 import { useJoinHousehold } from '../../hooks/useHousehold';
@@ -54,7 +54,17 @@ export default function InviteScreen() {
   const isError = joinHousehold.isError;
 
   return (
-    <View className="flex-1 bg-[#F8F9FA] items-center justify-center px-5 gap-6">
+    <View className="flex-1 bg-[#F8F9FA] px-5">
+      {/* Back button */}
+      <TouchableOpacity
+        onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
+        className="self-start pt-14 pb-4"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text className="text-[#2D6A4F] text-base font-medium">← Back</Text>
+      </TouchableOpacity>
+
+      <View className="flex-1 items-center justify-center gap-6">
       <Text className="text-5xl">🏠</Text>
       <Text className="text-2xl font-bold text-[#1A1A2E] text-center">
         You've been invited!
@@ -78,13 +88,9 @@ export default function InviteScreen() {
       ) : (
         <View className="w-full gap-3">
           <Button label="Join household" onPress={handleJoin} />
-          <Button
-            label="Cancel"
-            variant="secondary"
-            onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
-          />
         </View>
       )}
+      </View>
     </View>
   );
 }

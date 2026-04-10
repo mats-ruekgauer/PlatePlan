@@ -526,8 +526,15 @@ export async function invokeFunction<TBody, TResponse>(
 ): Promise<TResponse> {
   const { data, error } = await supabase.functions.invoke<TResponse>(name, { body });
   if (error) {
-    console.error(`[invokeFunction] ${name} failed:`, error.message);
-    throw new Error(error.message);
+    // Extract the real error message from the function's JSON response body
+    let detail = error.message;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errBody = await (error as any).context?.json?.();
+      if (errBody?.error) detail = errBody.error;
+    } catch { /* ignore – fall back to SDK message */ }
+    console.error(`[invokeFunction] ${name} failed:`, detail);
+    throw new Error(detail);
   }
   return data as TResponse;
 }

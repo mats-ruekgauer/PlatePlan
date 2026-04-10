@@ -98,16 +98,20 @@ export default function StepHousehold() {
       className="flex-1 bg-[#F8F9FA]"
       contentContainerClassName="px-5 pt-14 pb-8 gap-8"
     >
-      {/* Back button */}
-      {mode !== 'choose' && (
-        <TouchableOpacity
-          onPress={() => setMode('choose')}
-          className="self-start"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text className="text-[#2D6A4F] text-base font-medium">← Back</Text>
-        </TouchableOpacity>
-      )}
+      {/* Back button — exits to previous screen or mode */}
+      <TouchableOpacity
+        onPress={() => {
+          if (mode !== 'choose') {
+            setMode('choose');
+          } else {
+            router.canGoBack() ? router.back() : router.replace('/(tabs)');
+          }
+        }}
+        className="self-start"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text className="text-[#2D6A4F] text-base font-medium">← Back</Text>
+      </TouchableOpacity>
 
       {mode === 'choose' && (
         <>
