@@ -115,7 +115,7 @@ export interface Recipe {
 /** Mirrors `meal_plans` table */
 export interface MealPlan {
   id: string;
-  userId: string;
+  householdId: string;
   weekStart: string; // ISO date string — always a Monday
   status: MealPlanStatus;
   generatedAt: string;
@@ -138,7 +138,7 @@ export interface PlannedMeal {
 /** Mirrors `shopping_lists` table */
 export interface ShoppingList {
   id: string;
-  userId: string;
+  householdId: string;
   planId: string | null;
   shoppingDate: string | null; // ISO date
   items: ShoppingItem[];
@@ -310,6 +310,39 @@ export interface Automation {
   type: AutomationType;
   enabled: boolean;
   config: AutomationConfig;
+  createdAt: string;
+}
+
+// ─── Households ──────────────────────────────────────────────────────────────
+
+export type HouseholdRole = 'owner' | 'member';
+
+export interface Household {
+  id: string;
+  name: string;
+  createdBy: string;
+  managedMealSlots: MealSlot[];
+  shoppingDays: number[];      // 0=Sun … 6=Sat
+  batchCookDays: number;       // 1 | 2 | 3
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HouseholdMember {
+  id: string;
+  householdId: string;
+  userId: string;
+  displayName: string | null;  // joined from profiles
+  role: HouseholdRole;
+  joinedAt: string;
+}
+
+export interface HouseholdInvite {
+  id: string;
+  householdId: string;
+  token: string;
+  createdBy: string;
+  expiresAt: string;
   createdAt: string;
 }
 
