@@ -53,6 +53,7 @@ Rules:
 - If batchCookDays > 1, group recipes so the same dish appears across consecutive days and scale servings accordingly
 - Prefer liked cuisines
 - If prefersSeasonalIngredients is true, favour seasonal produce for the current month
+- Use cookFromScratchPreference (1=convenience food acceptable, 3=mix of fresh and pre-prepared, 5=always cook from raw ingredients) to guide ingredient processing level — at level 1 suggest pre-made sauces, pre-cut veg, ready-cooked grains; at level 5 use only whole raw ingredients
 - Do not repeat any recipe that has a wouldRepeat=false feedback entry
 - Prefer recipes with high taste ratings from feedback history
 - Vary cuisines across the week — do not repeat the same cuisine on consecutive days
