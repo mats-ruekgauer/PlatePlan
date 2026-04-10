@@ -1,0 +1,166 @@
+<h2>Tab bar style?</h2>
+<p class="subtitle">It's visible on every screen — it should feel like part of the glass system</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 180px;
+      background: linear-gradient(145deg,#f0fdf4,#ecfdf5 50%,#f0f9ff);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0;
+    ">
+      <div style="position:absolute;top:-30px;left:-20px;width:120px;height:120px;border-radius:50%;background:rgba(45,106,79,0.15);filter:blur(24px);"></div>
+      <div style="position:absolute;top:20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(82,183,136,0.18);filter:blur(20px);"></div>
+      <!-- Content behind tab bar -->
+      <div style="padding: 16px 16px 0; flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:8px;">
+        <div style="background:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px;backdrop-filter:blur(20px);">
+          <div style="font-size:9px;color:#9CA3AF;letter-spacing:2px;text-transform:uppercase;">DINNER</div>
+          <div style="font-size:13px;font-weight:700;color:#1A1A2E;margin-top:2px;">Pasta Carbonara</div>
+        </div>
+      </div>
+      <!-- Full-width frosted tab bar -->
+      <div style="
+        background: rgba(255,255,255,0.72);
+        border-top: 1px solid rgba(255,255,255,0.9);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        padding: 10px 0 8px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        box-shadow: 0 -1px 0 rgba(0,0,0,0.04);
+      ">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <span style="font-size:20px;">🗓️</span>
+          <span style="font-size:9px;font-weight:700;color:#2D6A4F;">Plan</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.45;">
+          <span style="font-size:20px;">🛒</span>
+          <span style="font-size:9px;font-weight:600;color:#6B7280;">Einkauf</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.45;">
+          <span style="font-size:20px;">⚙️</span>
+          <span style="font-size:9px;font-weight:600;color:#6B7280;">Profil</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Full-Width Frosted Glass</h3>
+      <p>Classic iOS system tab bar style — frosted glass stretches edge-to-edge. Clean, familiar, consistent with the platform. Background shows through underneath.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 180px;
+      background: linear-gradient(145deg,#f0fdf4,#ecfdf5 50%,#f0f9ff);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0;
+    ">
+      <div style="position:absolute;top:-30px;left:-20px;width:120px;height:120px;border-radius:50%;background:rgba(45,106,79,0.15);filter:blur(24px);"></div>
+      <div style="position:absolute;top:20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(82,183,136,0.18);filter:blur(20px);"></div>
+      <div style="padding: 16px 16px 0; flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:8px;">
+        <div style="background:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px;backdrop-filter:blur(20px);">
+          <div style="font-size:9px;color:#9CA3AF;letter-spacing:2px;text-transform:uppercase;">DINNER</div>
+          <div style="font-size:13px;font-weight:700;color:#1A1A2E;margin-top:2px;">Pasta Carbonara</div>
+        </div>
+      </div>
+      <!-- Floating pill tab bar -->
+      <div style="padding: 0 20px 12px; display:flex; justify-content:center;">
+        <div style="
+          background: rgba(255,255,255,0.78);
+          border: 1px solid rgba(255,255,255,0.95);
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+          border-radius: 28px;
+          padding: 10px 24px;
+          display: flex;
+          gap: 28px;
+          align-items: center;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(45,106,79,0.08);
+        ">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <span style="font-size:20px;">🗓️</span>
+            <span style="font-size:9px;font-weight:700;color:#2D6A4F;">Plan</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.45;">
+            <span style="font-size:20px;">🛒</span>
+            <span style="font-size:9px;font-weight:600;color:#6B7280;">Einkauf</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.45;">
+            <span style="font-size:20px;">⚙️</span>
+            <span style="font-size:9px;font-weight:600;color:#6B7280;">Profil</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Floating Pill</h3>
+      <p>A rounded glass pill that floats above the background — not attached to any edge. Feels modern and distinctive. The background gradient is visible below and beside it.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 180px;
+      background: linear-gradient(145deg,#f0fdf4,#ecfdf5 50%,#f0f9ff);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0;
+    ">
+      <div style="position:absolute;top:-30px;left:-20px;width:120px;height:120px;border-radius:50%;background:rgba(45,106,79,0.15);filter:blur(24px);"></div>
+      <div style="position:absolute;top:20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(82,183,136,0.18);filter:blur(20px);"></div>
+      <div style="padding: 16px 16px 0; flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:8px;">
+        <div style="background:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.85);border-radius:16px;padding:12px;backdrop-filter:blur(20px);">
+          <div style="font-size:9px;color:#9CA3AF;letter-spacing:2px;text-transform:uppercase;">DINNER</div>
+          <div style="font-size:13px;font-weight:700;color:#1A1A2E;margin-top:2px;">Pasta Carbonara</div>
+        </div>
+      </div>
+      <!-- Full-width frosted with active indicator pill -->
+      <div style="
+        background: rgba(255,255,255,0.72);
+        border-top: 1px solid rgba(255,255,255,0.9);
+        backdrop-filter: blur(24px);
+        padding: 10px 0 8px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        box-shadow: 0 -1px 0 rgba(0,0,0,0.04);
+      ">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;">
+          <div style="position:absolute;top:-4px;left:-12px;right:-12px;height:32px;background:rgba(45,106,79,0.1);border-radius:12px;"></div>
+          <span style="font-size:20px;position:relative;">🗓️</span>
+          <span style="font-size:9px;font-weight:700;color:#2D6A4F;position:relative;">Plan</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.45;">
+          <span style="font-size:20px;">🛒</span>
+          <span style="font-size:9px;font-weight:600;color:#6B7280;">Einkauf</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.45;">
+          <span style="font-size:20px;">⚙️</span>
+          <span style="font-size:9px;font-weight:600;color:#6B7280;">Profil</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Frosted + Active Pill Indicator</h3>
+      <p>Full-width frosted bar, but the active tab gets a soft green pill highlight behind it. Combines iOS familiarity with a more polished active-state treatment.</p>
+    </div>
+  </div>
+
+</div>

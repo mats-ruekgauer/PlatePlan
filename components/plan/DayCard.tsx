@@ -1,11 +1,10 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
+import { useI18n, getWeekdayName } from '../../lib/i18n';
 import { MealSlot } from './MealSlot';
 import { MealSlotSkeleton } from '../ui/Skeleton';
 import type { HydratedMeal, MealStatus } from '../../types';
-
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 interface DayCardProps {
   dayOfWeek: number; // 0=Monday
@@ -30,7 +29,8 @@ export function DayCard({
   onRegenerate,
   loading = false,
 }: DayCardProps) {
-  const dayName = DAY_NAMES[dayOfWeek] ?? `Day ${dayOfWeek}`;
+  const { language, t } = useI18n();
+  const dayName = getWeekdayName(language, dayOfWeek, 'long');
 
   return (
     <View className="gap-2">
@@ -45,7 +45,7 @@ export function DayCard({
         </Text>
         {isToday && (
           <View className="px-2 py-0.5 rounded-full bg-[#D8F3DC]">
-            <Text className="text-xs font-semibold text-[#2D6A4F]">Today</Text>
+            <Text className="text-xs font-semibold text-[#2D6A4F]">{t('day.today')}</Text>
           </View>
         )}
       </View>
@@ -68,7 +68,7 @@ export function DayCard({
           ))
         ) : (
           <View className="bg-white rounded-2xl p-4 border border-dashed border-gray-200">
-            <Text className="text-sm text-[#9CA3AF] text-center">No meals planned</Text>
+            <Text className="text-sm text-[#9CA3AF] text-center">{t('day.no_meals_planned')}</Text>
           </View>
         )}
       </View>

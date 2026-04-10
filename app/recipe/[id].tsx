@@ -9,14 +9,17 @@ import {
 import { useQuery } from '@tanstack/react-query';
 
 import { Badge } from '../../components/ui/Badge';
+import { IngredientPriceBreakdown } from '../../components/recipe/IngredientPriceBreakdown';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { mapRecipe, supabase } from '../../lib/supabase';
+import { useI18n } from '../../lib/i18n';
 import { shareRecipe } from '../../lib/sharing';
 import { colors } from '../../constants/theme';
 import type { Recipe } from '../../types';
 
 export default function RecipeDetailScreen() {
+  const { language } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const { data: recipe, isLoading } = useQuery({
@@ -165,6 +168,15 @@ export default function RecipeDetailScreen() {
 
       <SectionDivider />
 
+      <View className="px-4 py-5">
+        <IngredientPriceBreakdown
+          ingredients={recipe.ingredients}
+          labels={getIngredientPriceLabels(language)}
+        />
+      </View>
+
+      <SectionDivider />
+
       {/* Instructions */}
       <View className="px-4 py-5 gap-3">
         <Text className="text-lg font-bold text-[#1A1A2E]">Instructions</Text>
@@ -223,6 +235,36 @@ function MacroLabel({
 
 function SectionDivider() {
   return <View className="h-2 bg-[#F8F9FA]" />;
+}
+
+function getIngredientPriceLabels(language: string) {
+  if (language === 'de') {
+    return {
+      title: 'Preisaufschlüsselung',
+      subtitle: 'Basierend auf zuletzt gescannten passenden Kassenbons.',
+      total: 'Gematchte Zutaten',
+      matched: 'mit Preis',
+      unmatched: 'ohne Match',
+      noMatchesTitle: 'Noch keine Zutatenpreise gefunden',
+      noMatchesBody:
+        'Scanne ein paar Kassenbons, damit PlatePlan passende Preise einzelnen Zutaten zuordnen kann.',
+      noPrice: 'Kein Match',
+      basedOn: 'Basierend auf',
+    };
+  }
+
+  return {
+    title: 'Cost breakdown',
+    subtitle: 'Based on the latest matching scanned receipt items.',
+    total: 'Matched ingredients',
+    matched: 'priced',
+    unmatched: 'unmatched',
+    noMatchesTitle: 'No ingredient prices found yet',
+    noMatchesBody:
+      'Scan a few receipts so PlatePlan can match ingredient names to your price history.',
+    noPrice: 'No match',
+    basedOn: 'Based on',
+  };
 }
 
 function RecipeSkeleton() {

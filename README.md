@@ -7,7 +7,7 @@ An AI-powered meal planning app built with React Native (Expo) and Supabase. Pla
 ## Features
 
 ### Meal Planning
-- **AI-generated weekly meal plans** — Claude creates a full week of meals based on your dietary preferences, nutrition targets, cuisine preferences, and seasonality settings
+- **AI-generated weekly meal plans** — DeepSeek creates a full week of meals based on your dietary preferences, nutrition targets, cuisine preferences, and seasonality settings
 - **Week navigation** — scroll to browse previous and future weeks; generate next week's plan with one tap
 - **Meal actions per slot** — Approve, Skip (with undo), or request a completely different meal (↻ Different, AI-powered)
 - **Status tracking** — each meal progresses through Recommended → Planned → Prepared → Cooked → Rated
@@ -22,7 +22,7 @@ An AI-powered meal planning app built with React Native (Expo) and Supabase. Pla
 ### Favourites
 - **Star any meal** — tap the ⭐ on a meal detail screen to save it as a favourite
 - **Add manually** — add custom dish names in Profile settings
-- **Influences planning** — favourites are passed to Claude so similar meals appear more often
+- **Influences planning** — favourites are passed to DeepSeek so similar meals appear more often
 
 ### Automations
 - **Apple Reminders export** — automatically open Reminders with the shopping list after every plan generation
@@ -48,7 +48,7 @@ An AI-powered meal planning app built with React Native (Expo) and Supabase. Pla
 | Styling | NativeWind v4 (Tailwind CSS) |
 | State | Zustand + AsyncStorage (onboarding), React Query (server state) |
 | Backend | Supabase (PostgreSQL + Auth + Row-Level Security) |
-| AI | Anthropic Claude (via Supabase Edge Functions) |
+| AI | DeepSeek (via Supabase Edge Functions) |
 | Edge Functions | Deno (Supabase Functions) |
 
 ---
@@ -84,7 +84,7 @@ PlatePlan/
 - Node.js 18+
 - Expo CLI (`npm install -g expo`)
 - Supabase account
-- Anthropic API key
+- DeepSeek API key
 
 ### 1. Clone & install
 
@@ -120,10 +120,10 @@ supabase functions deploy regenerate-meal --no-verify-jwt
 supabase functions deploy generate-shopping-list --no-verify-jwt
 ```
 
-Set the `ANTHROPIC_API_KEY` secret in your Supabase project:
+Set the `DEEPSEEK_API_KEY` secret in your Supabase project:
 
 ```bash
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase secrets set DEEPSEEK_API_KEY=sk-...
 ```
 
 ### 4. Run
@@ -153,7 +153,7 @@ npx expo start --ios
 ## Edge Functions
 
 ### `generate-plan`
-Generates a full 7-day meal plan for the given `weekStart` date. Loads user preferences, feedback history, and favourite dishes, then calls Claude to produce structured recipe JSON. Stores recipes and planned meals in the database.
+Generates a full 7-day meal plan for the given `weekStart` date. Loads user preferences, feedback history, and favourite dishes, then calls DeepSeek to produce structured recipe JSON. Stores recipes and planned meals in the database.
 
 ### `regenerate-meal`
 Replaces a single planned meal slot with a new AI-generated recipe. Avoids duplicating any meal already in the current week's plan.
@@ -199,7 +199,7 @@ Aggregates all ingredients from a plan's recipes, deduplicates, groups by catego
 - [ ] **Preferences: processed ingredients** — slider for how much pre-processed / convenience food is acceptable
 - [ ] **Dish list** — browse all generated recipes in one place
 - [ ] **Language settings** — support multiple languages for the app UI and generated recipes
-- [ ] **Switch AI provider to DeepSeek** — replace Anthropic Claude with DeepSeek API for lower inference costs
+- [x] **Switch AI provider to DeepSeek** — replace Anthropic Claude with DeepSeek API for lower inference costs
 
 ### 🔁 Ongoing
 - [ ] Fix bugs (post-feature)

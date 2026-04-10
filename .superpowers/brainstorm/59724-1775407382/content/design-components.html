@@ -1,0 +1,134 @@
+<h2>Section 2 — Core Component Library</h2>
+<p class="subtitle">The building blocks every screen is assembled from</p>
+
+<!-- GlassCard -->
+<div class="section">
+  <h3>GlassCard — two depths</h3>
+  <p class="subtitle" style="margin-bottom:12px;">Primary (prominent) and Secondary (recessed). Same component, different opacity prop.</p>
+  <div style="
+    background: linear-gradient(145deg, #f0fdf4, #ecfdf5 50%, #f0f9ff);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  ">
+    <div style="position:absolute;top:-40px;left:-30px;width:160px;height:160px;border-radius:50%;background:rgba(45,106,79,0.13);filter:blur(36px);"></div>
+    <div style="position:absolute;bottom:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(82,183,136,0.14);filter:blur(28px);"></div>
+
+    <!-- Primary -->
+    <div style="flex:1;background:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.85);border-radius:20px;padding:14px;box-shadow:0 8px 32px rgba(45,106,79,0.08),0 1px 0 rgba(255,255,255,0.9) inset;position:relative;z-index:1;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px;">Primary · opacity 0.65</div>
+      <div style="font-size:13px;font-weight:700;color:#1A1A2E;">Pasta Carbonara</div>
+      <div style="font-size:11px;color:#6B7280;margin-top:2px;">520 kcal · 25 Min.</div>
+    </div>
+
+    <!-- Secondary -->
+    <div style="flex:1;background:rgba(255,255,255,0.42);border:1px solid rgba(255,255,255,0.60);border-radius:20px;padding:14px;box-shadow:0 4px 16px rgba(45,106,79,0.05);position:relative;z-index:1;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px;">Secondary · opacity 0.42</div>
+      <div style="font-size:13px;font-weight:700;color:#1A1A2E;">Buddha Bowl</div>
+      <div style="font-size:11px;color:#6B7280;margin-top:2px;">380 kcal · 15 Min.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Buttons -->
+<div class="section">
+  <h3>Button variants</h3>
+  <div style="
+    background: linear-gradient(145deg, #f0fdf4, #ecfdf5 50%, #f0f9ff);
+    border-radius:16px;padding:20px;
+    display:flex;flex-direction:column;gap:10px;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    position:relative;overflow:hidden;
+  ">
+    <div style="position:absolute;top:-30px;right:-20px;width:140px;height:140px;border-radius:50%;background:rgba(82,183,136,0.14);filter:blur(32px);"></div>
+
+    <!-- Primary gradient -->
+    <div style="background:linear-gradient(135deg,#2D6A4F,#52B788);border-radius:14px;padding:13px;text-align:center;font-size:14px;font-weight:700;color:white;box-shadow:0 4px 14px rgba(45,106,79,0.30);">
+      Primary — Gradient
+    </div>
+    <!-- Secondary glass -->
+    <div style="background:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.75);border-radius:14px;padding:13px;text-align:center;font-size:14px;font-weight:600;color:#1A1A2E;backdrop-filter:blur(12px);">
+      Secondary — Glass
+    </div>
+    <!-- Ghost -->
+    <div style="background:transparent;border-radius:14px;padding:13px;text-align:center;font-size:14px;font-weight:600;color:#2D6A4F;">
+      Ghost — Transparent
+    </div>
+    <!-- Danger -->
+    <div style="background:rgba(220,38,38,0.85);border-radius:14px;padding:13px;text-align:center;font-size:14px;font-weight:700;color:white;box-shadow:0 4px 14px rgba(220,38,38,0.25);">
+      Danger
+    </div>
+  </div>
+</div>
+
+<!-- Badges + Pills -->
+<div class="section">
+  <h3>Info pills (replacing Badge)</h3>
+  <div style="
+    background: linear-gradient(145deg, #f0fdf4, #ecfdf5 50%, #f0f9ff);
+    border-radius:16px;padding:20px;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  ">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <span style="background:rgba(234,88,12,0.10);color:#c2410c;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">520 kcal</span>
+      <span style="background:rgba(37,99,235,0.08);color:#1d4ed8;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">25 Min.</span>
+      <span style="background:rgba(45,106,79,0.10);color:#2D6A4F;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">€ 3.20</span>
+      <span style="background:rgba(37,99,235,0.10);color:#1d4ed8;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">Batch</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <span style="background:rgba(156,163,175,0.15);color:#6B7280;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">Vorschlag</span>
+      <span style="background:rgba(37,99,235,0.10);color:#1d4ed8;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">Geplant</span>
+      <span style="background:rgba(217,119,6,0.12);color:#b45309;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">Vorbereitet</span>
+      <span style="background:rgba(22,163,74,0.10);color:#15803d;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">Gekocht</span>
+      <span style="background:rgba(45,106,79,0.12);color:#2D6A4F;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;">Bewertet</span>
+      <span style="background:rgba(156,163,175,0.12);color:#9CA3AF;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;text-decoration:line-through;">Übersprungen</span>
+    </div>
+  </div>
+</div>
+
+<!-- MealSwapper bottom sheet -->
+<div class="section">
+  <h3>MealSwapper — glass bottom sheet</h3>
+  <div style="
+    background: linear-gradient(145deg, #f0fdf4, #ecfdf5 50%, #f0f9ff);
+    border-radius:16px;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    position:relative;
+  ">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.18);z-index:1;"></div>
+    <div style="height:60px;"></div>
+    <!-- Sheet -->
+    <div style="
+      position:relative;z-index:2;
+      background:rgba(240,253,244,0.82);
+      backdrop-filter:blur(32px);
+      border-radius:28px 28px 0 0;
+      border-top:1px solid rgba(255,255,255,0.75);
+      padding:16px 20px 20px;
+      box-shadow:0 -8px 40px rgba(0,0,0,0.12);
+    ">
+      <div style="width:36px;height:4px;background:rgba(0,0,0,0.18);border-radius:2px;margin:0 auto 14px;"></div>
+      <div style="font-size:15px;font-weight:800;color:#1A1A2E;margin-bottom:12px;letter-spacing:-0.3px;">Mahlzeit wechseln</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <!-- Option A — selected -->
+        <div style="background:rgba(45,106,79,0.12);border:1.5px solid rgba(45,106,79,0.35);border-radius:16px;padding:12px 14px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#2D6A4F;margin-bottom:3px;">Option A</div>
+          <div style="font-size:13px;font-weight:700;color:#1A1A2E;">Pasta Carbonara</div>
+          <div style="font-size:11px;color:#6B7280;margin-top:2px;">520 kcal · 25 Min.</div>
+        </div>
+        <!-- Option B -->
+        <div style="background:rgba(255,255,255,0.55);border:1.5px solid rgba(255,255,255,0.70);border-radius:16px;padding:12px 14px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;margin-bottom:3px;">Option B</div>
+          <div style="font-size:13px;font-weight:700;color:#1A1A2E;">Risotto ai Funghi</div>
+          <div style="font-size:11px;color:#6B7280;margin-top:2px;">480 kcal · 35 Min.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="color:#6B7280;font-size:13px;margin-top:8px;">Components look right? Or anything to tweak before we move to screens?</p>

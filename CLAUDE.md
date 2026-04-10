@@ -22,7 +22,7 @@ npm run test:coverage  # Coverage report
 
 ## Architecture
 
-PlatePlan is an AI-powered meal planning React Native app built with Expo. The AI (Claude Sonnet) runs exclusively in Supabase Deno Edge Functions — never in the client.
+PlatePlan is an AI-powered meal planning React Native app built with Expo. The text-generation model runs exclusively in Supabase Deno Edge Functions — never in the client.
 
 ### Navigation & Auth
 
@@ -48,14 +48,14 @@ Two separate layers:
 ### Edge Functions (Supabase/Deno)
 
 All AI and complex server logic lives in `supabase/functions/`:
-- `generate-plan/` — full weekly meal plan via Claude
+- `generate-plan/` — full weekly meal plan via DeepSeek
 - `regenerate-meal/` — regenerate a single meal slot
 - `generate-shopping-list/` — aggregate ingredients by category
 - `process-feedback/` — feedback processing (currently on hold)
-- `process-receipt/` — receipt OCR (currently on hold)
+- `process-receipt/` — receipt OCR via Anthropic Vision (currently on hold)
 - `_shared/prompts.ts` — shared prompt constants
 
-Claude prompts are centralized in `constants/prompts.ts`. Edge Functions build user-specific prompts dynamically from user preferences and feedback history. Zod validates all Claude JSON responses before DB writes. Retry logic uses exponential backoff (3 attempts).
+Prompts are centralized in `constants/prompts.ts`. Edge Functions build user-specific prompts dynamically from user preferences and feedback history. Zod validates structured model JSON responses before DB writes. Retry logic uses exponential backoff (3 attempts).
 
 ### Styling
 
@@ -63,7 +63,7 @@ NativeWind 4 (Tailwind CSS for React Native). Design tokens (colors, spacing, ty
 
 ## Key Conventions
 
-- **All Claude API calls go through Edge Functions** — the `ANTHROPIC_API_KEY` is a Supabase secret, never exposed to the client.
+- **All text-generation API calls go through Edge Functions** — the `DEEPSEEK_API_KEY` is a Supabase secret, never exposed to the client.
 - **Optimistic updates** — meal status changes update the UI immediately and revert on error.
 - **Mappers** — always use the mapper functions in `lib/supabase.ts` when reading DB rows; never access snake_case fields directly in the UI layer.
 - **React Query cache invalidation** — after any mutation that changes plan data, invalidate the relevant query keys so the UI stays in sync.
@@ -73,7 +73,8 @@ NativeWind 4 (Tailwind CSS for React Native). Design tokens (colors, spacing, ty
 ```env
 EXPO_PUBLIC_SUPABASE_URL=      # Client-facing Supabase URL
 EXPO_PUBLIC_SUPABASE_ANON_KEY= # Client-facing anon key
-ANTHROPIC_API_KEY=             # Server-side only (Supabase Edge Function secret)
+DEEPSEEK_API_KEY=              # Server-side only (Supabase Edge Function secret)
+ANTHROPIC_API_KEY=             # Still used by receipt OCR
 ```
 
-`ANTHROPIC_API_KEY` is set as a Supabase secret, not in `.env`.
+`DEEPSEEK_API_KEY` and `ANTHROPIC_API_KEY` are set as Supabase secrets, not in `.env`.

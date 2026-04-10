@@ -22,6 +22,8 @@ export type ActivityLevel =
 
 export type Sex = 'male' | 'female' | 'other';
 
+export type AppLanguage = 'en' | 'de';
+
 export type PlanStatus = 'active' | 'archived';
 
 export type MealPlanStatus = 'active' | 'archived';
@@ -54,6 +56,7 @@ export interface ShoppingItem extends Ingredient {
 export interface Profile {
   id: string; // UUID — same as auth.users.id
   displayName: string | null;
+  email?: string | null;
   createdAt: string; // ISO timestamp
   updatedAt: string;
 }
@@ -78,6 +81,7 @@ export interface UserPreferences {
   likedCuisines: string[];
   seasonalityImportance: 1 | 2 | 3 | 4 | 5;
   cookFromScratchPreference: 1 | 2 | 3 | 4 | 5;
+  preferredLanguage: AppLanguage;
   // Planning
   managedMealSlots: MealSlot[];
   unmanagedSlotCalories: Partial<Record<MealSlot, number>>; // e.g. { breakfast: 400 }
@@ -110,6 +114,7 @@ export interface Recipe {
   isSeasonal: boolean;
   season: Season;
   estimatedPriceEur: number | null;
+  source: 'ai_generated' | 'manual';
   createdAt: string;
 }
 
@@ -267,6 +272,7 @@ export interface OnboardingState {
   likedCuisines: string[];
   seasonalityImportance: 1 | 2 | 3 | 4 | 5;
   cookFromScratchPreference: 1 | 2 | 3 | 4 | 5;
+  preferredLanguage: AppLanguage;
   // Step 3 — Meal slots
   managedMealSlots: MealSlot[];
   unmanagedSlotCalories: Partial<Record<MealSlot, number>>;

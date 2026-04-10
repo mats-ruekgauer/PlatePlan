@@ -3,6 +3,7 @@ import React from 'react';
 import { Text } from 'react-native';
 
 import { colors } from '../../constants/theme';
+import { useI18n } from '../../lib/i18n';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
@@ -13,6 +14,8 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 }
 
 export default function TabsLayout() {
+  const { t } = useI18n();
+
   return (
     <Tabs
       screenOptions={{
@@ -30,28 +33,29 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Meal Plan',
+          title: t('tabs.meal_plan'),
           tabBarIcon: ({ focused }) => <TabIcon emoji="🗓️" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="shopping"
         options={{
-          title: 'Shopping',
+          href: null,
+          title: t('tabs.shopping'),
           tabBarIcon: ({ focused }) => <TabIcon emoji="🛒" focused={focused} />,
         }}
       />
-      {/* Recipes — hidden until feature is ready */}
       <Tabs.Screen
         name="recipes"
         options={{
-          href: null,
+          title: 'Recipes',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📖" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
         }}
       />

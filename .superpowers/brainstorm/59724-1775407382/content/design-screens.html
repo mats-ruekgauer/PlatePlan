@@ -1,0 +1,81 @@
+<h2>Section 3 — Screen Redesigns</h2>
+<p class="subtitle">What changes on each screen. Global background is already there — these are the per-screen deltas.</p>
+
+<div class="section">
+  <h3>Main Tabs</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+    <tr style="border-bottom:2px solid #e5e7eb;">
+      <th style="text-align:left;padding:10px 8px;color:#6B7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Screen</th>
+      <th style="text-align:left;padding:10px 8px;color:#6B7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;">What changes</th>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;font-weight:700;color:#1A1A2E;">Meal Plan<br><span style="font-family:monospace;font-size:10px;color:#9CA3AF;">(tabs)/index.tsx</span></td>
+      <td style="padding:12px 8px;color:#374151;">Remove solid <code>bg-white</code> + existing blob Views (replaced by global background). DayCard headers get a subtle glass divider. MealSlot uses finalized GlassCard + new pill badges. "Dein Plan" header stays, week-range text beneath it. Status card at top becomes a GlassCard. FloatingAction becomes a GlassCard pill button.</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;font-weight:700;color:#1A1A2E;">Shopping<br><span style="font-family:monospace;font-size:10px;color:#9CA3AF;">(tabs)/shopping.tsx</span></td>
+      <td style="padding:12px 8px;color:#374151;">Replace <code>bg-[#F8F9FA]</code> with transparent. Each category group becomes a GlassCard (primary depth). Checked items fade to 0.4 opacity. Progress bar becomes a frosted GlassCard with a green fill track. "All done" banner is a primary GlassCard with gradient accent. Shopping items themselves get a subtle glass row.</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;font-weight:700;color:#1A1A2E;">Profile<br><span style="font-family:monospace;font-size:10px;color:#9CA3AF;">(tabs)/profile.tsx</span></td>
+      <td style="padding:12px 8px;color:#374151;">Replace all <code>Card</code> usages with <code>GlassCard</code>. Settings sections (Ziele, Präferenzen, Favoriten, Automationen) each become a GlassCard. Switch + TextInput fields get glass styling. Sign out becomes a ghost/danger button. Profile header gets avatar placeholder in a frosted circle.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>Auth Screens</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+    <tr style="border-bottom:2px solid #e5e7eb;">
+      <th style="text-align:left;padding:10px 8px;color:#6B7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Screen</th>
+      <th style="text-align:left;padding:10px 8px;color:#6B7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;">What changes</th>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;font-weight:700;color:#1A1A2E;">Welcome<br><span style="font-family:monospace;font-size:10px;color:#9CA3AF;">(auth)/welcome.tsx</span></td>
+      <td style="padding:12px 8px;color:#374151;">Global background shows through. App name + tagline centred on the canvas. Two buttons (Anmelden, Registrieren) as GlassCard pill — primary gradient + secondary glass stacked. No other surface elements needed.</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;font-weight:700;color:#1A1A2E;">Sign-in / Sign-up<br><span style="font-family:monospace;font-size:10px;color:#9CA3AF;">(auth)/sign-*.tsx</span></td>
+      <td style="padding:12px 8px;color:#374151;">Form lives inside a single primary GlassCard centred on screen. TextInputs get a secondary glass style (white/40 bg, white/60 border). Submit = primary gradient button. Back arrow ghost button top-left.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>Onboarding (7 steps)</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;color:#374151;" colspan="2">All 7 steps share the same treatment: global background, step content in a primary GlassCard, progress indicator at top as a thin green track on a frosted pill. Continue/Back buttons at bottom use primary gradient + secondary glass. No per-step background changes — consistency is the goal here.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>Detail & Settings Screens</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+    <tr style="border-bottom:2px solid #e5e7eb;">
+      <th style="text-align:left;padding:10px 8px;color:#6B7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Screen</th>
+      <th style="text-align:left;padding:10px 8px;color:#6B7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;">What changes</th>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;font-weight:700;color:#1A1A2E;">Meal Detail<br><span style="font-family:monospace;font-size:10px;color:#9CA3AF;">meal/[id].tsx</span></td>
+      <td style="padding:12px 8px;color:#374151;">Hero section (recipe title, macros) in primary GlassCard. Ingredients list as secondary GlassCard. Steps as secondary GlassCard. StarRating + feedback form in primary GlassCard at bottom. Back button is a frosted glass circle.</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:12px 8px;font-weight:700;color:#1A1A2E;">Settings screens<br><span style="font-family:monospace;font-size:10px;color:#9CA3AF;">settings/*.tsx</span></td>
+      <td style="padding:12px 8px;color:#374151;">Same pattern as Profile — all Card → GlassCard, solid backgrounds removed, inputs get glass styling. Consistent with onboarding look since both are edit-form flows.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="background:rgba(45,106,79,0.06);border-radius:12px;padding:14px;">
+  <h3 style="margin-bottom:6px;">What is NOT changing</h3>
+  <ul style="margin:0;padding-left:18px;color:#374151;font-size:13px;line-height:1.8;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+    <li>All data hooks, React Query keys, Supabase calls — zero business logic changes</li>
+    <li>Component props and interfaces — only internal styling changes</li>
+    <li>Navigation structure — Expo Router file layout stays identical</li>
+    <li>Animations — keeping existing press/active states, no new animation library needed</li>
+  </ul>
+</div>
+
+<p style="color:#6B7280;font-size:13px;margin-top:16px;">Screen plan look complete? Any screens you want treated differently?</p>

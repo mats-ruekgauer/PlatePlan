@@ -26,7 +26,10 @@ async function fetchProfile(): Promise<Profile | null> {
     .single();
 
   if (error) throw error;
-  return mapProfile(data);
+  return {
+    ...mapProfile(data),
+    email: session.user.email ?? null,
+  };
 }
 
 async function fetchPreferences(): Promise<UserPreferences | null> {
@@ -76,7 +79,7 @@ export function useUpdateDisplayName() {
 
       const { error } = await supabase
         .from('profiles')
-        .update({ display_name: displayName })
+        .update({ display_name: displayName } as never)
         .eq('id', session.user.id);
       if (error) throw error;
     },
@@ -107,6 +110,7 @@ export function useUpdatePreferences() {
       maxCookTimeMinutes: number;
       shoppingDays: number[];
       pantryStaples: string[];
+      preferredLanguage: 'en' | 'de';
     }>) => {
       const {
         data: { session },
@@ -130,10 +134,11 @@ export function useUpdatePreferences() {
       if (updates.maxCookTimeMinutes !== undefined) dbUpdates.max_cook_time_minutes = updates.maxCookTimeMinutes;
       if (updates.shoppingDays !== undefined) dbUpdates.shopping_days = updates.shoppingDays;
       if (updates.pantryStaples !== undefined) dbUpdates.pantry_staples = updates.pantryStaples;
+      if (updates.preferredLanguage !== undefined) dbUpdates.preferred_language = updates.preferredLanguage;
 
       const { error } = await supabase
         .from('user_preferences')
-        .update(dbUpdates)
+        .update(dbUpdates as never)
         .eq('user_id', session.user.id);
       if (error) throw error;
     },

@@ -58,6 +58,7 @@ Rules:
 - Prefer recipes with high taste ratings from feedback history
 - Vary cuisines across the week — do not repeat the same cuisine on consecutive days
 - Include pantryStaples implicitly (do not list them as ingredients in the shopping list)\
+- preferredLanguage controls the output language for all user-facing recipe text (title, description, ingredient names, steps, cuisine labels and tags)\
 `;
 
 /**
@@ -68,8 +69,17 @@ export function buildPlanGenerationUserPrompt(params: {
   weekStart: string;
   preferences: object;
   feedbackHistory: object[];
+  manualRecipes: object[];
   currentMonth: string;
 }): string {
+  const manualRecipesSection =
+    params.manualRecipes.length > 0
+      ? `
+The user has added the following personal recipes to their collection. Include them in the plan where they fit the user's preferences and goals:
+${JSON.stringify(params.manualRecipes, null, 2)}
+`
+      : '';
+
   return `\
 Generate a weekly meal plan starting Monday ${params.weekStart} for a user with these preferences:
 
@@ -78,7 +88,11 @@ ${JSON.stringify(params.preferences, null, 2)}
 Feedback history (use this to avoid disliked meals and favour liked ones):
 ${JSON.stringify(params.feedbackHistory, null, 2)}
 
-Current month: ${params.currentMonth} (use for seasonal logic)\
+${manualRecipesSection}
+
+Current month: ${params.currentMonth} (use for seasonal logic)
+
+Generate all user-facing recipe text in the preferredLanguage from the preferences JSON.\
 `;
 }
 

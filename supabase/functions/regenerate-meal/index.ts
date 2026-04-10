@@ -1,10 +1,10 @@
 // supabase/functions/regenerate-meal/index.ts
 // Deno Edge Function — do not import Node-only modules.
 
-import Anthropic from 'npm:@anthropic-ai/sdk';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 
+import { callDeepSeekJson } from '../_shared/deepseek.ts';
 import { PLAN_GENERATION_SYSTEM_PROMPT } from '../_shared/prompts.ts';
 
 // ─── Zod schemas (same as generate-plan) ─────────────────────────────────────
@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', userId)
       .single();
 
-    // ── Build Claude prompt ──────────────────────────────────────────────────
+    // ── Build model prompt ───────────────────────────────────────────────────
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const currentTitle = ((plannedMeal as any).recipes as { title: string } | null)?.title ?? 'current meal';
@@ -123,18 +123,13 @@ Respond ONLY with a valid JSON object conforming to this exact structure:
 }
 `.trim();
 
-    // ── Call Claude ──────────────────────────────────────────────────────────
-    const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY')! });
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: PLAN_GENERATION_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
+    // ── Call DeepSeek ────────────────────────────────────────────────────────
+    const parsed = await callDeepSeekJson({
+      systemPrompt: PLAN_GENERATION_SYSTEM_PROMPT,
+      userPrompt,
+      maxTokens: 4096,
+      requestLabel: 'regenerate-meal',
     });
-
-    const rawText = message.content[0].type === 'text' ? message.content[0].text : '';
-    const cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    const parsed: unknown = JSON.parse(cleaned);
     const validated = SingleMealResponseSchema.parse(parsed);
 
     // ── Persist ──────────────────────────────────────────────────────────────

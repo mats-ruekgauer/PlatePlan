@@ -19,10 +19,9 @@ import { useGeneratePlan } from '../../hooks/usePlan';
 import { useGenerateShoppingList } from '../../hooks/useShoppingList';
 import { useFavorites, useAddCustomFavorite, useRemoveFavorite } from '../../hooks/useFavorites';
 import { useAutomations, useUpsertAutomation } from '../../hooks/useAutomations';
+import { getWeekdayName, useI18n } from '../../lib/i18n';
 import { signOut } from '../../lib/supabase';
 import type { SmsShareConfig } from '../../types';
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function getThisMonday(): string {
   const now = new Date();
@@ -34,6 +33,7 @@ function getThisMonday(): string {
 }
 
 export default function ProfileScreen() {
+  const { language, t } = useI18n();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: prefs, isLoading: prefsLoading } = usePreferences();
   const { data: favorites = [], isLoading: favLoading } = useFavorites();
@@ -65,12 +65,12 @@ export default function ProfileScreen() {
 
   function handleRegeneratePlan() {
     Alert.alert(
-      'Regenerate plan',
-      "This will replace all of this week's meals. Continue?",
+      t('profile.regenerate_plan_title'),
+      t('profile.regenerate_plan_message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Regenerate',
+          text: t('profile.regenerate'),
           style: 'destructive',
           onPress: () =>
             generatePlan.mutate(getThisMonday(), {
@@ -85,10 +85,10 @@ export default function ProfileScreen() {
   }
 
   async function handleSignOut() {
-    Alert.alert('Sign out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.sign_out_title'), t('profile.are_you_sure'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign out',
+        text: t('profile.sign_out'),
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -135,115 +135,126 @@ export default function ProfileScreen() {
       className="flex-1 bg-[#F8F9FA]"
       contentContainerClassName="px-4 pt-14 pb-10 gap-5"
     >
-      <Text className="text-2xl font-bold text-[#1A1A2E]">Profile</Text>
+      <Text className="text-2xl font-bold text-[#1A1A2E]">{t('profile.title')}</Text>
 
       {/* Display name */}
       {isLoading ? (
         <Skeleton height={20} width="40%" />
       ) : (
         <Text className="text-base text-[#6B7280]">
-          {profile?.displayName ?? 'Your account'}
+          {profile?.displayName ?? t('profile.your_account')}
         </Text>
       )}
 
+      <Card className="gap-3">
+        <SummaryRow
+          label={t('profile.account')}
+          value={t('profile.manage_profile_settings')}
+        />
+        <EditLink
+          label={t('profile.open_profile_settings')}
+          onPress={() => router.push('/settings/profile')}
+        />
+      </Card>
+
       {/* Summary cards */}
-      <SectionHeader title="Nutrition targets" />
+      <SectionHeader title={t('profile.nutrition_targets')} />
       {isLoading ? (
         <Skeleton height={80} borderRadius={16} />
       ) : (
         <Card className="gap-3">
           <SummaryRow
-            label="Daily calories"
-            value={prefs?.calorieTarget ? `${prefs.calorieTarget} kcal` : 'Not set'}
+            label={t('profile.daily_calories')}
+            value={prefs?.calorieTarget ? `${prefs.calorieTarget} kcal` : t('common.not_set')}
           />
           <SummaryRow
-            label="Daily protein"
-            value={prefs?.proteinTargetG ? `${prefs.proteinTargetG} g` : 'Not set'}
+            label={t('profile.daily_protein')}
+            value={prefs?.proteinTargetG ? `${prefs.proteinTargetG} g` : t('common.not_set')}
           />
-          <EditLink label="Edit goals" onPress={() => router.push('/(onboarding)/step-goals')} />
+          <EditLink label={t('profile.edit_goals')} onPress={() => router.push('/(onboarding)/step-goals')} />
         </Card>
       )}
 
-      <SectionHeader title="Meal planning" />
+      <SectionHeader title={t('profile.meal_planning')} />
       {isLoading ? (
         <Skeleton height={120} borderRadius={16} />
       ) : (
         <Card className="gap-3">
           <SummaryRow
-            label="Managed meals"
+            label={t('profile.managed_meals')}
             value={
               prefs?.managedMealSlots?.length
                 ? prefs.managedMealSlots.join(', ')
-                : 'None'
+                : t('common.none')
             }
           />
           <SummaryRow
-            label="Batch cooking"
+            label={t('profile.batch_cooking')}
             value={
               prefs?.batchCookDays === 1
-                ? 'Cook fresh daily'
-                : `Cook for ${prefs?.batchCookDays ?? 1} days`
+                ? t('profile.cook_fresh_daily')
+                : t('profile.cook_for_days', { days: prefs?.batchCookDays ?? 1 })
             }
           />
           <SummaryRow
-            label="Max cook time"
+            label={t('profile.max_cook_time')}
             value={
               prefs?.maxCookTimeMinutes
-                ? `${prefs.maxCookTimeMinutes} min`
-                : 'Not set'
+                ? `${prefs.maxCookTimeMinutes} ${t('common.minutes_short')}`
+                : t('common.not_set')
             }
           />
           <EditLink
-            label="Edit meal slots"
+            label={t('profile.edit_meal_slots')}
             onPress={() => router.push('/(onboarding)/step-meal-slots')}
           />
         </Card>
       )}
 
-      <SectionHeader title="Food preferences" />
+      <SectionHeader title={t('profile.food_preferences')} />
       {isLoading ? (
         <Skeleton height={100} borderRadius={16} />
       ) : (
         <Card className="gap-3">
           <View>
-            <Text className="text-xs text-[#6B7280] mb-1.5">Dietary restrictions</Text>
+            <Text className="text-xs text-[#6B7280] mb-1.5">{t('profile.dietary_restrictions')}</Text>
             <View className="flex-row flex-wrap gap-1.5">
               {prefs?.dietaryRestrictions?.length ? (
                 prefs.dietaryRestrictions.map((r) => (
                   <Badge key={r} label={r.replace(/_/g, ' ')} variant="default" />
                 ))
               ) : (
-                <Text className="text-sm text-[#9CA3AF]">None</Text>
+                <Text className="text-sm text-[#9CA3AF]">{t('common.none')}</Text>
               )}
             </View>
           </View>
           <View>
-            <Text className="text-xs text-[#6B7280] mb-1.5">Liked cuisines</Text>
+            <Text className="text-xs text-[#6B7280] mb-1.5">{t('profile.liked_cuisines')}</Text>
             <View className="flex-row flex-wrap gap-1.5">
               {prefs?.likedCuisines?.length ? (
                 prefs.likedCuisines.map((c) => (
                   <Badge key={c} label={c} variant="info" />
                 ))
               ) : (
-                <Text className="text-sm text-[#9CA3AF]">None selected</Text>
+                <Text className="text-sm text-[#9CA3AF]">{t('profile.none_selected')}</Text>
               )}
             </View>
           </View>
           <EditLink
-            label="Edit preferences"
+            label={t('profile.edit_preferences')}
             onPress={() => router.push('/settings/preferences')}
           />
         </Card>
       )}
 
       {/* Favourite Dishes */}
-      <SectionHeader title="Favourite dishes" />
+      <SectionHeader title={t('profile.favourite_dishes')} />
       {favLoading ? (
         <Skeleton height={80} borderRadius={16} />
       ) : (
         <Card className="gap-3">
           {favorites.length === 0 ? (
-            <Text className="text-sm text-[#9CA3AF]">No favourites yet.</Text>
+            <Text className="text-sm text-[#9CA3AF]">{t('profile.no_favourites_yet')}</Text>
           ) : (
             <View className="gap-2">
               {favorites.map((fav) => (
@@ -266,23 +277,23 @@ export default function ProfileScreen() {
             onPress={() => setAddFavModalVisible(true)}
             className="self-start active:opacity-70"
           >
-            <Text className="text-xs font-semibold text-[#2D6A4F]">+ Add manually</Text>
+            <Text className="text-xs font-semibold text-[#2D6A4F]">{t('profile.add_manually')}</Text>
           </TouchableOpacity>
         </Card>
       )}
 
       {/* Automations */}
-      <SectionHeader title="Automations" />
+      <SectionHeader title={t('profile.automations')} />
       <Card className="gap-4">
         {/* Reminders export */}
         <View className="gap-1">
           <View className="flex-row items-center justify-between">
             <View className="flex-1 mr-3">
               <Text className="text-sm font-semibold text-[#1A1A2E]">
-                Apple Reminders
+                {t('profile.apple_reminders')}
               </Text>
               <Text className="text-xs text-[#6B7280]">
-                Export shopping list when plan is generated
+                {t('profile.export_list_when_plan_generated')}
               </Text>
             </View>
             <Switch
@@ -299,9 +310,9 @@ export default function ProfileScreen() {
         <View className="gap-2">
           <View className="flex-row items-center justify-between">
             <View className="flex-1 mr-3">
-              <Text className="text-sm font-semibold text-[#1A1A2E]">Send via SMS</Text>
+              <Text className="text-sm font-semibold text-[#1A1A2E]">{t('profile.send_via_sms')}</Text>
               <Text className="text-xs text-[#6B7280]">
-                Share shopping list when plan is generated
+                {t('profile.share_list_when_plan_generated')}
               </Text>
             </View>
             <Switch
@@ -314,14 +325,14 @@ export default function ProfileScreen() {
             <View className="gap-2 pt-1">
               <TextInput
                 className="rounded-xl border border-gray-200 bg-[#F8F9FA] px-4 py-3 text-sm text-[#1A1A2E]"
-                placeholder="Contact name"
+                placeholder={t('profile.contact_name')}
                 value={smsContact}
                 onChangeText={setSmsContact}
                 onEndEditing={saveSmsConfig}
               />
               <TextInput
                 className="rounded-xl border border-gray-200 bg-[#F8F9FA] px-4 py-3 text-sm text-[#1A1A2E]"
-                placeholder="Phone number (e.g. +49123456789)"
+                placeholder={t('profile.phone_number')}
                 value={smsNumber}
                 onChangeText={setSmsNumber}
                 keyboardType="phone-pad"
@@ -332,32 +343,32 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
-      <SectionHeader title="Shopping" />
+      <SectionHeader title={t('profile.shopping')} />
       {isLoading ? (
         <Skeleton height={60} borderRadius={16} />
       ) : (
         <Card className="gap-3">
           <SummaryRow
-            label="Shopping days"
+            label={t('profile.shopping_days')}
             value={
               prefs?.shoppingDays?.length
                 ? prefs.shoppingDays
                     .slice()
                     .sort()
-                    .map((d) => DAY_NAMES[d])
+                    .map((d) => getWeekdayName(language, d === 0 ? 6 : d - 1, 'short'))
                     .join(', ')
-                : 'Not set'
+                : t('common.not_set')
             }
           />
           <EditLink
-            label="Edit shopping days"
+            label={t('profile.edit_shopping_days')}
             onPress={() => router.push('/(onboarding)/step-shopping-days')}
           />
         </Card>
       )}
 
       {/* Actions */}
-      <SectionHeader title="Actions" />
+      <SectionHeader title={t('profile.actions')} />
       <Card className="gap-2">
         <TouchableOpacity
           onPress={handleRegeneratePlan}
@@ -365,7 +376,7 @@ export default function ProfileScreen() {
           className="flex-row items-center justify-between py-2 active:opacity-70"
         >
           <Text className="text-sm font-semibold text-[#2D6A4F]">
-            {generatePlan.isPending ? 'Regenerating…' : "Regenerate this week's plan"}
+            {generatePlan.isPending ? t('profile.regenerating') : t('profile.regenerate_this_weeks_plan')}
           </Text>
           <Text className="text-[#9CA3AF]">›</Text>
         </TouchableOpacity>
@@ -374,7 +385,7 @@ export default function ProfileScreen() {
           onPress={handleSignOut}
           className="flex-row items-center justify-between py-2 active:opacity-70"
         >
-          <Text className="text-sm font-semibold text-[#DC2626]">Sign out</Text>
+          <Text className="text-sm font-semibold text-[#DC2626]">{t('profile.sign_out')}</Text>
           <Text className="text-[#9CA3AF]">›</Text>
         </TouchableOpacity>
       </Card>
@@ -388,10 +399,10 @@ export default function ProfileScreen() {
       >
         <View className="flex-1 bg-black/40 items-center justify-center px-8">
           <View className="bg-white rounded-2xl p-6 w-full gap-4">
-            <Text className="text-base font-bold text-[#1A1A2E]">Add favourite dish</Text>
+            <Text className="text-base font-bold text-[#1A1A2E]">{t('profile.add_favourite_dish')}</Text>
             <TextInput
               className="rounded-xl border border-gray-200 px-4 py-3 text-sm text-[#1A1A2E]"
-              placeholder="Dish name..."
+              placeholder={t('profile.dish_name')}
               value={newFavName}
               onChangeText={setNewFavName}
               autoFocus
@@ -403,13 +414,13 @@ export default function ProfileScreen() {
                 onPress={() => setAddFavModalVisible(false)}
                 className="flex-1 py-3 rounded-xl border border-gray-200 items-center"
               >
-                <Text className="text-sm font-semibold text-[#6B7280]">Cancel</Text>
+                <Text className="text-sm font-semibold text-[#6B7280]">{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAddFavorite}
                 className="flex-1 py-3 rounded-xl bg-[#2D6A4F] items-center"
               >
-                <Text className="text-sm font-semibold text-white">Add</Text>
+                <Text className="text-sm font-semibold text-white">{t('profile.add')}</Text>
               </TouchableOpacity>
             </View>
           </View>

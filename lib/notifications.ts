@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { translate } from './i18n';
 import type { HydratedPlan, MealSlot, ScheduledMealNotification } from '../types';
 
 // ─── Configure notification behaviour ────────────────────────────────────────
@@ -24,9 +25,11 @@ Notifications.setNotificationHandler({
  * Called on the onboarding step-complete screen.
  */
 export async function requestNotificationPermission(): Promise<boolean> {
+  const language = await getCurrentLanguage();
+
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('meal-reminders', {
-      name: 'Meal reminders',
+      name: translate(language, 'notifications.channel_name'),
       importance: Notifications.AndroidImportance.DEFAULT,
       vibrationPattern: [0, 250, 250, 250],
     });
@@ -77,6 +80,7 @@ export async function schedulePlanNotifications(
 
   const scheduled: ScheduledMealNotification[] = [];
   const now = new Date();
+  const language = await getCurrentLanguage();
 
   for (const day of plan.days) {
     // Calculate the absolute date for this day of the week
@@ -94,11 +98,13 @@ export async function schedulePlanNotifications(
       // Don't schedule notifications in the past
       if (triggerDate <= now) continue;
 
-      const body = `How was ${meal.recipe.title}? Tap to rate it.`;
+      const body = translate(language, 'notifications.feedback_body', {
+        recipe: meal.recipe.title,
+      });
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'How was your meal?',
+          title: translate(language, 'notifications.feedback_title'),
           body,
           data: {
             plannedMealId: meal.id,
@@ -178,11 +184,23 @@ export function getMealIdFromNotificationResponse(
 // without opening the app. MVP: just opens the app to the meal screen.
 
 export async function registerNotificationCategories(): Promise<void> {
+  const language = await getCurrentLanguage();
+
   await Notifications.setNotificationCategoryAsync('meal-feedback', [
     {
       identifier: 'rate',
-      buttonTitle: 'Rate meal',
+      buttonTitle: translate(language, 'notifications.rate_meal'),
       options: { opensAppToForeground: true },
     },
   ]);
+}
+
+async function getCurrentLanguage(): Promise<'en' | 'de'> {
+  try {
+    const AsyncStorage = await import('@react-native-async-storage/async-storage');
+    const value = await AsyncStorage.default.getItem('plateplan-language');
+    return value === 'de' ? 'de' : 'en';
+  } catch {
+    return 'en';
+  }
 }

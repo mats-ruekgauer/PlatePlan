@@ -1,0 +1,145 @@
+<h2>Section 1 — Global Background Canvas</h2>
+<p class="subtitle">Lives in <code>app/_layout.tsx</code> behind the Stack navigator. Every screen floats on this.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Background system — full screen preview</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;">
+    <div style="
+      width: 100%;
+      min-height: 340px;
+      background: linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 35%, #f0f9ff 65%, #fdf4ff 100%);
+      position: relative;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    ">
+      <!-- Blob 1 - top left, primary green -->
+      <div style="position:absolute;top:-60px;left:-60px;width:280px;height:280px;border-radius:50%;background:rgba(45,106,79,0.13);filter:blur(48px);"></div>
+      <!-- Blob 2 - top right, light green -->
+      <div style="position:absolute;top:40px;right:-80px;width:320px;height:320px;border-radius:50%;background:rgba(82,183,136,0.14);filter:blur(56px);"></div>
+      <!-- Blob 3 - mid left, blue hint -->
+      <div style="position:absolute;top:180px;left:40px;width:200px;height:200px;border-radius:50%;background:rgba(14,165,233,0.07);filter:blur(40px);"></div>
+      <!-- Blob 4 - bottom right -->
+      <div style="position:absolute;bottom:-40px;right:20px;width:240px;height:240px;border-radius:50%;background:rgba(45,106,79,0.10);filter:blur(44px);"></div>
+      <!-- Blob 5 - bottom left, warm -->
+      <div style="position:absolute;bottom:-20px;left:-20px;width:180px;height:180px;border-radius:50%;background:rgba(250,204,21,0.06);filter:blur(36px);"></div>
+
+      <!-- Sample content floating on top -->
+      <div style="position:relative;z-index:1;padding:28px 20px;display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <div style="font-size:28px;font-weight:800;color:#1A1A2E;letter-spacing:-0.8px;">Dein Plan</div>
+          <div style="font-size:13px;color:#6B7280;margin-top:2px;font-weight:500;">Mo, 7. Apr — So, 13. Apr</div>
+        </div>
+
+        <!-- Glass card 1 -->
+        <div style="
+          background:rgba(255,255,255,0.65);
+          border:1px solid rgba(255,255,255,0.85);
+          border-radius:24px;
+          padding:18px;
+          backdrop-filter:blur(24px);
+          box-shadow:0 8px 32px rgba(45,106,79,0.08), 0 1px 0 rgba(255,255,255,0.9) inset;
+        ">
+          <div style="font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#9CA3AF;font-weight:600;">Montag · Dinner</div>
+          <div style="font-size:17px;font-weight:800;color:#1A1A2E;margin:4px 0;letter-spacing:-0.4px;">Pasta Carbonara</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span style="background:rgba(234,88,12,0.10);color:#c2410c;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;">520 kcal</span>
+            <span style="background:rgba(37,99,235,0.08);color:#1d4ed8;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;">25 Min.</span>
+            <span style="background:rgba(45,106,79,0.10);color:#2D6A4F;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;">€ 3.20</span>
+          </div>
+          <!-- Actions -->
+          <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.04);">
+            <div style="flex:1;background:linear-gradient(135deg,#2D6A4F,#52B788);border-radius:12px;padding:9px;text-align:center;font-size:12px;font-weight:700;color:white;box-shadow:0 3px 10px rgba(45,106,79,0.28);">Bestätigen</div>
+            <div style="flex:1;background:rgba(255,255,255,0.55);border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:9px;text-align:center;font-size:12px;font-weight:600;color:#6B7280;">Überspringen</div>
+          </div>
+        </div>
+
+        <!-- Glass card 2 - slightly less opaque for depth -->
+        <div style="
+          background:rgba(255,255,255,0.55);
+          border:1px solid rgba(255,255,255,0.75);
+          border-radius:24px;
+          padding:18px;
+          backdrop-filter:blur(20px);
+          box-shadow:0 6px 24px rgba(45,106,79,0.06);
+        ">
+          <div style="font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#9CA3AF;font-weight:600;">Montag · Lunch</div>
+          <div style="font-size:17px;font-weight:800;color:#1A1A2E;margin:4px 0;letter-spacing:-0.4px;">Buddha Bowl</div>
+          <div style="display:flex;gap:8px;">
+            <span style="background:rgba(234,88,12,0.10);color:#c2410c;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;">380 kcal</span>
+            <span style="background:rgba(37,99,235,0.08);color:#1d4ed8;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;">15 Min.</span>
+          </div>
+        </div>
+
+        <!-- Frosted tab bar -->
+        <div style="
+          background:rgba(255,255,255,0.72);
+          border:1px solid rgba(255,255,255,0.9);
+          border-radius:20px;
+          padding:10px 16px;
+          display:flex;
+          justify-content:space-around;
+          align-items:center;
+          box-shadow:0 -1px 0 rgba(0,0,0,0.03), 0 4px 20px rgba(0,0,0,0.06);
+          backdrop-filter:blur(24px);
+        ">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <div style="width:22px;height:22px;background:rgba(45,106,79,0.15);border-radius:6px;display:flex;align-items:center;justify-content:center;">
+              <div style="width:12px;height:10px;border:2px solid #2D6A4F;border-radius:2px;"></div>
+            </div>
+            <span style="font-size:9px;font-weight:700;color:#2D6A4F;">Plan</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.4;">
+            <div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;">
+              <div style="width:14px;height:14px;border:2px solid #6B7280;border-radius:3px;position:relative;"><div style="position:absolute;top:-3px;left:2px;width:10px;height:3px;border:2px solid #6B7280;border-radius:2px 2px 0 0;"></div></div>
+            </div>
+            <span style="font-size:9px;font-weight:600;color:#6B7280;">Einkauf</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.4;">
+            <div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;">
+              <div style="width:14px;height:14px;border-radius:50%;border:2px solid #6B7280;"></div>
+            </div>
+            <span style="font-size:9px;font-weight:600;color:#6B7280;">Profil</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Token changes in <code>constants/theme.ts</code></h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <tr style="border-bottom:1px solid #e5e7eb;">
+      <th style="text-align:left;padding:8px;color:#6B7280;font-weight:600;">Token</th>
+      <th style="text-align:left;padding:8px;color:#6B7280;font-weight:600;">Current</th>
+      <th style="text-align:left;padding:8px;color:#6B7280;font-weight:600;">New</th>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-family:monospace;font-size:12px;">surface</td>
+      <td style="padding:8px;">#FFFFFF</td>
+      <td style="padding:8px;">rgba(255,255,255,0.65) — glass base</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-family:monospace;font-size:12px;">surfaceSecondary</td>
+      <td style="padding:8px;">#F8F9FA</td>
+      <td style="padding:8px;">rgba(255,255,255,0.45) — secondary glass</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-family:monospace;font-size:12px;color:#2D6A4F;font-weight:600;">glass (new)</td>
+      <td style="padding:8px;">—</td>
+      <td style="padding:8px;">rgba(255,255,255,0.65) + rgba(255,255,255,0.85) border</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:8px;font-family:monospace;font-size:12px;color:#2D6A4F;font-weight:600;">bgGradient (new)</td>
+      <td style="padding:8px;">—</td>
+      <td style="padding:8px;">145deg: #f0fdf4 → #ecfdf5 → #f0f9ff → #fdf4ff</td>
+    </tr>
+    <tr>
+      <td style="padding:8px;font-family:monospace;font-size:12px;">radius.xl</td>
+      <td style="padding:8px;">24</td>
+      <td style="padding:8px;">28 — slightly more rounded cards</td>
+    </tr>
+  </table>
+</div>
+
+<p style="color:#6B7280;font-size:13px;margin-top:16px;">Does this canvas and token direction look right? Let me know in the terminal.</p>

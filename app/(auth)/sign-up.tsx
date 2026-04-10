@@ -14,20 +14,26 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { Button } from '../../components/ui/Button';
+import { useI18n } from '../../lib/i18n';
 import { signUpWithEmail } from '../../lib/supabase';
 
-const schema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
-}).refine((d) => d.password === d.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
-
-type Form = z.infer<typeof schema>;
+type Form = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
 
 export default function SignUpScreen() {
+  const { t } = useI18n();
+  const schema = z.object({
+    email: z.string().email(t('auth.enter_valid_email')),
+    password: z.string().min(8, t('auth.password_min_8')),
+    confirmPassword: z.string(),
+  }).refine((d) => d.password === d.confirmPassword, {
+    message: t('auth.passwords_do_not_match'),
+    path: ['confirmPassword'],
+  });
+
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema),
   });
@@ -37,7 +43,10 @@ export default function SignUpScreen() {
       await signUpWithEmail(data.email, data.password);
       router.replace('/(onboarding)/step-goals');
     } catch (err) {
-      Alert.alert('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
+      Alert.alert(
+        t('auth.sign_up_failed'),
+        err instanceof Error ? err.message : t('auth.please_try_again'),
+      );
     }
   }
 
@@ -48,15 +57,15 @@ export default function SignUpScreen() {
     >
       <View className="flex-1 px-6 justify-center gap-6">
         <View className="gap-1">
-          <Text className="text-3xl font-bold text-[#1A1A2E]">Create account</Text>
+          <Text className="text-3xl font-bold text-[#1A1A2E]">{t('auth.create_account')}</Text>
           <Text className="text-base text-[#6B7280]">
-            Set up your PlatePlan account in seconds.
+            {t('auth.sign_up_subtitle')}
           </Text>
         </View>
 
         <View className="gap-4">
           <View className="gap-1">
-            <Text className="text-sm font-medium text-[#1A1A2E]">Email</Text>
+            <Text className="text-sm font-medium text-[#1A1A2E]">{t('auth.email')}</Text>
             <Controller
               control={control}
               name="email"
@@ -76,7 +85,7 @@ export default function SignUpScreen() {
           </View>
 
           <View className="gap-1">
-            <Text className="text-sm font-medium text-[#1A1A2E]">Password</Text>
+            <Text className="text-sm font-medium text-[#1A1A2E]">{t('auth.password')}</Text>
             <Controller
               control={control}
               name="password"
@@ -85,7 +94,7 @@ export default function SignUpScreen() {
                   className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
                   secureTextEntry
                   autoComplete="new-password"
-                  placeholder="Min. 8 characters"
+                  placeholder={t('auth.min_8_characters')}
                   value={value}
                   onChangeText={onChange}
                 />
@@ -95,7 +104,7 @@ export default function SignUpScreen() {
           </View>
 
           <View className="gap-1">
-            <Text className="text-sm font-medium text-[#1A1A2E]">Confirm password</Text>
+            <Text className="text-sm font-medium text-[#1A1A2E]">{t('auth.confirm_password')}</Text>
             <Controller
               control={control}
               name="confirmPassword"
@@ -104,7 +113,7 @@ export default function SignUpScreen() {
                   className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
                   secureTextEntry
                   autoComplete="new-password"
-                  placeholder="Repeat password"
+                  placeholder={t('auth.repeat_password')}
                   value={value}
                   onChangeText={onChange}
                 />
@@ -116,12 +125,16 @@ export default function SignUpScreen() {
           </View>
         </View>
 
-        <Button label="Create account" loading={isSubmitting} onPress={handleSubmit(onSubmit)} />
+        <Button
+          label={t('auth.create_account_button')}
+          loading={isSubmitting}
+          onPress={handleSubmit(onSubmit)}
+        />
 
         <TouchableOpacity onPress={() => router.back()} className="items-center">
           <Text className="text-sm text-[#6B7280]">
-            Already have an account?{' '}
-            <Text className="text-[#2D6A4F] font-semibold">Sign in</Text>
+            {t('auth.already_have_account')}{' '}
+            <Text className="text-[#2D6A4F] font-semibold">{t('auth.sign_in')}</Text>
           </Text>
         </TouchableOpacity>
       </View>

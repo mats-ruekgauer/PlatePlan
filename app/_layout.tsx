@@ -9,6 +9,7 @@ import {
   getMealIdFromNotificationResponse,
   registerNotificationCategories,
 } from '../lib/notifications';
+import { LanguageProvider } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import { selectOnboardingIsComplete, useOnboardingStore } from '../stores/onboardingStore';
 
@@ -98,26 +99,34 @@ export default function RootLayout() {
         supabase.auth.stopAutoRefresh();
       }
     }
+
+    handleAppStateChange(AppState.currentState);
+
     const sub = AppState.addEventListener('change', handleAppStateChange);
-    return () => sub.remove();
+    return () => {
+      supabase.auth.stopAutoRefresh();
+      sub.remove();
+    };
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(onboarding)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="meal/[id]"
-          options={{ presentation: 'card', animation: 'slide_from_right' }}
-        />
-        <Stack.Screen
-          name="recipe/[id]"
-          options={{ presentation: 'card', animation: 'slide_from_right' }}
-        />
-      </Stack>
-      <AuthGuard />
+      <LanguageProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(onboarding)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="meal/[id]"
+            options={{ presentation: 'card', animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="recipe/[id]"
+            options={{ presentation: 'card', animation: 'slide_from_right' }}
+          />
+        </Stack>
+        <AuthGuard />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

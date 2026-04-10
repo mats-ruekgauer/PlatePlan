@@ -3,25 +3,28 @@ import React from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
+import { useI18n } from '../../lib/i18n';
 
 export default function WelcomeScreen() {
+  const { t } = useI18n();
+
   return (
     <View className="flex-1 bg-white px-6 justify-center gap-8">
       <View className="items-center gap-3">
         <Text className="text-6xl">🥗</Text>
         <Text className="text-4xl font-bold text-[#1A1A2E] text-center">PlatePlan</Text>
         <Text className="text-base text-[#6B7280] text-center">
-          Your personal AI meal planner. Stop thinking about what to cook.
+          {t('welcome.tagline')}
         </Text>
       </View>
 
       <View className="gap-3">
         <Button
-          label="Get started"
+          label={t('welcome.get_started')}
           onPress={() => router.push('/(auth)/sign-up')}
         />
         <Button
-          label="I already have an account"
+          label={t('welcome.have_account')}
           variant="ghost"
           onPress={() => router.push('/(auth)/sign-in')}
         />

@@ -4,13 +4,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 
-import { callDeepSeekJson } from '../_shared/deepseek.ts';
 import {
   buildPlanGenerationUserPrompt,
   PLAN_GENERATION_SYSTEM_PROMPT,
-} from '../_shared/prompts.ts';
-
-// ─── Zod schemas for model response validation ────────────────────────────────
+} from './supabase/functions/_shared/prompts.ts';
 
 const IngredientSchema = z.object({
   name: z.string().min(1),
@@ -52,17 +49,12 @@ const PlanResponseSchema = z.object({
   days: z.array(DaySchema).min(1),
 });
 
-type ValidatedPlan = z.infer<typeof PlanResponseSchema>;
-
-// ─── Handler ──────────────────────────────────────────────────────────────────
-
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return cors(new Response('ok'));
   }
 
   try {
-    // ── Auth ────────────────────────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return errorResponse('Missing Authorization header', 401);
     const jwt = authHeader.replace('Bearer ', '');
@@ -73,42 +65,34 @@ Deno.serve(async (req: Request) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    // Pass the JWT explicitly so getUser() validates it against the Auth API
-    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
-    if (authError || !user) return errorResponse(`Unauthorized: ${authError?.message}`, 401);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return errorResponse(`Unauthorized: ${authError?.message}`, 401);
+    }
+
     const userId = user.id;
 
-    // ── Input ────────────────────────────────────────────────────────────────
-    const body = await req.json() as { weekStart: string };
-    const weekStart: string = body.weekStart;
+    const body = (await req.json()) as { weekStart: string };
+    const weekStart = body.weekStart;
+
     if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
       return errorResponse('weekStart must be an ISO date string (YYYY-MM-DD)', 400);
     }
 
-    // ── Load preferences ─────────────────────────────────────────────────────
     const { data: prefs, error: prefsError } = await supabase
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
       .single();
-    if (prefsError || !prefs) return errorResponse('User preferences not found', 404);
 
-    // ── Load manual recipes ──────────────────────────────────────────────────
-    const { data: manualRecipeRows } = await supabase
-      .from('recipes')
-      .select('title, description, cuisine, tags')
-      .eq('user_id', userId)
-      .eq('source', 'manual')
-      .order('created_at', { ascending: false });
+    if (prefsError || !prefs) {
+      return errorResponse('User preferences not found', 404);
+    }
 
-    const manualRecipes = (manualRecipeRows ?? []).map((recipe) => ({
-      title: recipe.title,
-      description: recipe.description,
-      cuisine: recipe.cuisine,
-      tags: recipe.tags ?? [],
-    }));
-
-    // ── Load last 10 feedback entries ────────────────────────────────────────
     const { data: feedbackRows } = await supabase
       .from('meal_feedback')
       .select('recipe_id, taste_rating, portion_rating, would_repeat, notes, recipes(title)')
@@ -124,43 +108,37 @@ Deno.serve(async (req: Request) => {
       notes: row.notes,
     }));
 
-    // ── Load favourite dishes ─────────────────────────────────────────────────
     const { data: favRows } = await supabase
       .from('user_favorites')
       .select('custom_name, recipes(title, cuisine)')
       .eq('user_id', userId);
 
-    const favoriteDishes = (favRows ?? []).map((row) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const r = row as any;
-      return {
-        name: r.recipes?.title ?? r.custom_name ?? null,
-        cuisine: r.recipes?.cuisine ?? null,
-      };
-    }).filter((f) => f.name !== null);
+    const favoriteDishes = (favRows ?? [])
+      .map((row) => {
+        const r = row as any;
+        return {
+          name: r.recipes?.title ?? r.custom_name ?? null,
+          cuisine: r.recipes?.cuisine ?? null,
+        };
+      })
+      .filter((f) => f.name !== null);
 
-    // ── Build model prompt ───────────────────────────────────────────────────
     const currentMonth = new Date(weekStart).toLocaleString('en-US', { month: 'long' });
     const userPrompt = buildPlanGenerationUserPrompt({
       weekStart,
       preferences: prefs,
       feedbackHistory,
       favoriteDishes,
-      manualRecipes,
       currentMonth,
     });
 
-    // ── Call DeepSeek (with retry) ───────────────────────────────────────────
     const plan = await callDeepSeekWithRetry(userPrompt);
 
-    // ── Persist to DB ────────────────────────────────────────────────────────
-    // Use service-role client for inserts so RLS doesn't block Edge Function writes
     const serviceClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Upsert meal plan row
     const { data: mealPlan, error: planError } = await serviceClient
       .from('meal_plans')
       .upsert(
@@ -169,15 +147,16 @@ Deno.serve(async (req: Request) => {
       )
       .select()
       .single();
-    if (planError || !mealPlan) throw new Error(`Failed to upsert meal plan: ${planError?.message}`);
+
+    if (planError || !mealPlan) {
+      throw new Error(`Failed to upsert meal plan: ${planError?.message}`);
+    }
 
     const insertedMeals: Array<{ id: string; day_of_week: number; meal_slot: string }> = [];
 
     for (const day of plan.days) {
       for (const mealSlot of day.meals) {
-        // Insert primary recipe
         const primaryRecipeId = await upsertRecipe(serviceClient, userId, mealSlot.recipe);
-        // Insert alternative recipe
         const altRecipeId = await upsertRecipe(serviceClient, userId, mealSlot.alternativeRecipe);
 
         const { data: pm, error: pmError } = await serviceClient
@@ -194,7 +173,11 @@ Deno.serve(async (req: Request) => {
           )
           .select()
           .single();
-        if (pmError || !pm) throw new Error(`Failed to upsert planned meal: ${pmError?.message}`);
+
+        if (pmError || !pm) {
+          throw new Error(`Failed to upsert planned meal: ${pmError?.message}`);
+        }
+
         insertedMeals.push(pm);
       }
     }
@@ -211,29 +194,71 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-// ─── DeepSeek call with exponential backoff retry ─────────────────────────────
+async function callDeepSeekWithRetry(userPrompt: string, maxAttempts = 3) {
+  const apiKey = Deno.env.get('DEEPSEEK_API_KEY');
+  if (!apiKey) {
+    throw new Error('Missing DEEPSEEK_API_KEY secret');
+  }
 
-async function callDeepSeekWithRetry(userPrompt: string, maxAttempts = 3): Promise<ValidatedPlan> {
-  const parsed = await callDeepSeekJson({
-    systemPrompt: PLAN_GENERATION_SYSTEM_PROMPT,
-    userPrompt,
-    maxTokens: 8192,
-    maxAttempts,
-    requestLabel: 'generate-plan',
-  });
+  let lastError: Error | null = null;
 
-  return PlanResponseSchema.parse(parsed);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: PLAN_GENERATION_SYSTEM_PROMPT },
+            { role: 'user', content: userPrompt },
+          ],
+          max_tokens: 8192,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!response.ok) {
+        const bodyText = await response.text();
+        throw new Error(`DeepSeek API error (${response.status}): ${bodyText}`);
+      }
+
+      const data = await response.json() as any;
+      const rawText = data?.choices?.[0]?.message?.content ?? '';
+
+      if (!rawText.trim()) {
+        throw new Error('DeepSeek returned empty content');
+      }
+
+      const cleaned = rawText
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      const parsed = JSON.parse(cleaned);
+      return PlanResponseSchema.parse(parsed);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`[generate-plan] attempt ${attempt} failed:`, lastError.message);
+
+      if (attempt < maxAttempts) {
+        await sleep(500 * 2 ** (attempt - 1));
+      }
+    }
+  }
+
+  throw lastError ?? new Error('Plan generation failed after retries');
 }
 
-// ─── DB helpers ───────────────────────────────────────────────────────────────
-
 async function upsertRecipe(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any,
   userId: string,
   recipe: z.infer<typeof RecipeSchema>,
 ): Promise<string> {
-  // Check if a recipe with the same title already exists for this user
   const { data: existing } = await client
     .from('recipes')
     .select('id')
@@ -262,13 +287,19 @@ async function upsertRecipe(
       is_seasonal: recipe.isSeasonal,
       season: recipe.season,
       estimated_price_eur: recipe.estimatedPriceEur,
-      source: 'ai_generated',
     })
     .select('id')
     .single();
 
-  if (error || !data) throw new Error(`Failed to insert recipe "${recipe.title}": ${error?.message}`);
+  if (error || !data) {
+    throw new Error(`Failed to insert recipe "${recipe.title}": ${error?.message}`);
+  }
+
   return data.id as string;
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 function cors(res: Response): Response {

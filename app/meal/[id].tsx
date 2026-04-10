@@ -16,12 +16,14 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { Badge } from '../../components/ui/Badge';
+import { IngredientPriceBreakdown } from '../../components/recipe/IngredientPriceBreakdown';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { StarRating } from '../../components/ui/StarRating';
 import { useMealFeedback, useSubmitFeedback } from '../../hooks/useFeedback';
 import { usePlannedMeal } from '../../hooks/usePlan';
 import { useIsFavorite, useToggleFavorite } from '../../hooks/useFavorites';
+import { getMealSlotLabel, useI18n } from '../../lib/i18n';
 import { shareRecipe } from '../../lib/sharing';
 import { colors } from '../../constants/theme';
 import type { Recipe } from '../../types';
@@ -40,6 +42,7 @@ type FeedbackForm = z.infer<typeof feedbackSchema>;
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MealDetailScreen() {
+  const { language, t } = useI18n();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: meal, isLoading } = usePlannedMeal(id);
   const { data: existingFeedback } = useMealFeedback(id);
@@ -84,10 +87,10 @@ export default function MealDetailScreen() {
       {
         onSuccess: () => {
           setFeedbackSubmitted(true);
-          Alert.alert('Thanks!', 'Your feedback helps improve future plans.');
+          Alert.alert(t('meal.thanks_title'), t('meal.thanks_message'));
         },
         onError: (err) => {
-          Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save feedback.');
+          Alert.alert(t('common.error'), err instanceof Error ? err.message : t('meal.feedback_failed'));
         },
       },
     );
@@ -101,9 +104,9 @@ export default function MealDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-[#F8F9FA] gap-3">
         <Text className="text-4xl">😕</Text>
-        <Text className="text-base font-semibold text-[#1A1A2E]">Meal not found</Text>
+        <Text className="text-base font-semibold text-[#1A1A2E]">{t('meal.not_found')}</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="text-sm text-[#2D6A4F] font-medium">Go back</Text>
+          <Text className="text-sm text-[#2D6A4F] font-medium">{t('meal.go_back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -134,7 +137,7 @@ export default function MealDetailScreen() {
               <Text className="text-lg">‹</Text>
             </TouchableOpacity>
             <Badge
-              label={meal.mealSlot.charAt(0).toUpperCase() + meal.mealSlot.slice(1)}
+              label={getMealSlotLabel(language, meal.mealSlot)}
               variant="default"
             />
             <View className="flex-1" />
@@ -166,7 +169,7 @@ export default function MealDetailScreen() {
               <Badge label={recipe.cuisine} variant="muted" />
             )}
             {recipe.isSeasonal && (
-              <Badge label="Seasonal" variant="success" dot />
+              <Badge label={t('meal.seasonal')} variant="success" dot />
             )}
             {recipe.tags.map((tag) => (
               <Badge key={tag} label={tag} variant="muted" />
@@ -179,14 +182,14 @@ export default function MealDetailScreen() {
             className="flex-row items-center gap-2 self-start px-4 py-2 rounded-xl bg-[#D8F3DC] active:opacity-70"
           >
             <Text className="text-sm">📤</Text>
-            <Text className="text-sm font-semibold text-[#2D6A4F]">Share recipe</Text>
+            <Text className="text-sm font-semibold text-[#2D6A4F]">{t('meal.share_recipe')}</Text>
           </TouchableOpacity>
         </View>
 
         <Divider />
 
         {/* Ingredients */}
-        <Section title="Ingredients">
+        <Section title={t('meal.ingredients')}>
           <View
             className="bg-white rounded-2xl overflow-hidden"
             style={{ shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } }}
@@ -209,8 +212,17 @@ export default function MealDetailScreen() {
 
         <Divider />
 
+        <View className="px-4 py-5">
+          <IngredientPriceBreakdown
+            ingredients={recipe.ingredients}
+            labels={getIngredientPriceLabels(language)}
+          />
+        </View>
+
+        <Divider />
+
         {/* Steps */}
-        <Section title="Instructions">
+        <Section title={t('meal.instructions')}>
           <View className="gap-3">
             {recipe.steps.map((step, idx) => (
               <View
@@ -230,11 +242,11 @@ export default function MealDetailScreen() {
         <Divider />
 
         {/* Feedback */}
-        <Section title="How was it?">
+        <Section title={t('meal.how_was_it')}>
           <View className="gap-5">
             {/* Taste rating */}
             <View className="gap-2">
-              <Text className="text-sm font-semibold text-[#1A1A2E]">Taste</Text>
+              <Text className="text-sm font-semibold text-[#1A1A2E]">{t('meal.taste')}</Text>
               <Controller
                 control={control}
                 name="tasteRating"
@@ -251,7 +263,7 @@ export default function MealDetailScreen() {
 
             {/* Portion rating */}
             <View className="gap-2">
-              <Text className="text-sm font-semibold text-[#1A1A2E]">Portion size</Text>
+              <Text className="text-sm font-semibold text-[#1A1A2E]">{t('meal.portion_size')}</Text>
               <Controller
                 control={control}
                 name="portionRating"
@@ -267,7 +279,7 @@ export default function MealDetailScreen() {
 
             {/* Would repeat */}
             <View className="gap-2">
-              <Text className="text-sm font-semibold text-[#1A1A2E]">Would you cook this again?</Text>
+              <Text className="text-sm font-semibold text-[#1A1A2E]">{t('meal.would_cook_again')}</Text>
               <Controller
                 control={control}
                 name="wouldRepeat"
@@ -297,7 +309,7 @@ export default function MealDetailScreen() {
                               : 'text-[#9CA3AF]'
                           }`}
                         >
-                          {opt ? 'Yes' : 'No'}
+                          {opt ? t('common.yes') : t('common.no')}
                         </Text>
                       </Pressable>
                     ))}
@@ -308,7 +320,7 @@ export default function MealDetailScreen() {
 
             {/* Notes */}
             <View className="gap-2">
-              <Text className="text-sm font-semibold text-[#1A1A2E]">Notes (optional)</Text>
+              <Text className="text-sm font-semibold text-[#1A1A2E]">{t('meal.notes_optional')}</Text>
               <Controller
                 control={control}
                 name="notes"
@@ -317,7 +329,7 @@ export default function MealDetailScreen() {
                     className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E] min-h-[80px]"
                     multiline
                     textAlignVertical="top"
-                    placeholder="Anything you'd change next time?"
+                    placeholder={t('meal.notes_placeholder')}
                     value={value ?? ''}
                     onChangeText={onChange}
                     editable={!(feedbackSubmitted && !isDirty)}
@@ -334,14 +346,18 @@ export default function MealDetailScreen() {
                 className="h-[52px] rounded-xl bg-[#2D6A4F] items-center justify-center active:opacity-80"
               >
                 <Text className="text-white font-semibold text-base">
-                  {submitFeedback.isPending ? 'Saving…' : feedbackSubmitted ? 'Update feedback' : 'Submit feedback'}
+                  {submitFeedback.isPending
+                    ? t('common.saving')
+                    : feedbackSubmitted
+                    ? t('meal.update_feedback')
+                    : t('meal.submit_feedback')}
                 </Text>
               </TouchableOpacity>
             )}
 
             {feedbackSubmitted && !isDirty && (
               <View className="flex-row items-center justify-center gap-2 py-2">
-                <Text className="text-sm text-[#2D6A4F]">✓ Feedback saved</Text>
+                <Text className="text-sm text-[#2D6A4F]">✓ {t('meal.feedback_saved')}</Text>
               </View>
             )}
           </View>
@@ -354,6 +370,7 @@ export default function MealDetailScreen() {
 // ─── MacroBar ─────────────────────────────────────────────────────────────────
 
 function MacroBar({ recipe }: { recipe: Recipe }) {
+  const { t } = useI18n();
   const kcal = recipe.caloriesPerServing ?? 0;
   const p = recipe.proteinPerServingG ?? 0;
   const c = recipe.carbsPerServingG ?? 0;
@@ -363,10 +380,10 @@ function MacroBar({ recipe }: { recipe: Recipe }) {
   return (
     <View className="gap-2">
       <View className="flex-row justify-between">
-        <MacroLabel color={colors.calorie} label="Calories" value={`${kcal}`} unit="kcal" />
-        <MacroLabel color={colors.protein} label="Protein" value={`${p}`} unit="g" />
-        <MacroLabel color={colors.carbs} label="Carbs" value={`${c}`} unit="g" />
-        <MacroLabel color={colors.fat} label="Fat" value={`${f}`} unit="g" />
+        <MacroLabel color={colors.calorie} label={t('meal.calories')} value={`${kcal}`} unit="kcal" />
+        <MacroLabel color={colors.protein} label={t('meal.protein')} value={`${p}`} unit="g" />
+        <MacroLabel color={colors.carbs} label={t('meal.carbs')} value={`${c}`} unit="g" />
+        <MacroLabel color={colors.fat} label={t('meal.fat')} value={`${f}`} unit="g" />
       </View>
       <ProgressBar
         segments={[
@@ -405,12 +422,6 @@ function MacroLabel({
 
 // ─── PortionPicker ────────────────────────────────────────────────────────────
 
-const PORTION_OPTIONS: { value: number; label: string; emoji: string }[] = [
-  { value: 1, label: 'Too small', emoji: '😐' },
-  { value: 3, label: 'Perfect', emoji: '😊' },
-  { value: 5, label: 'Too much', emoji: '😅' },
-];
-
 function PortionPicker({
   value,
   onChange,
@@ -420,9 +431,16 @@ function PortionPicker({
   onChange: (v: number) => void;
   readonly: boolean;
 }) {
+  const { t } = useI18n();
+  const portionOptions = [
+    { value: 1, label: t('meal.portion.too_small'), emoji: '😐' },
+    { value: 3, label: t('meal.portion.perfect'), emoji: '😊' },
+    { value: 5, label: t('meal.portion.too_much'), emoji: '😅' },
+  ];
+
   return (
     <View className="flex-row gap-3">
-      {PORTION_OPTIONS.map((opt) => (
+      {portionOptions.map((opt) => (
         <Pressable
           key={opt.value}
           onPress={() => onChange(opt.value)}
@@ -461,6 +479,36 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Divider() {
   return <View className="h-2 bg-[#F8F9FA]" />;
+}
+
+function getIngredientPriceLabels(language: string) {
+  if (language === 'de') {
+    return {
+      title: 'Preisaufschlüsselung',
+      subtitle: 'Basierend auf zuletzt gescannten passenden Kassenbons.',
+      total: 'Gematchte Zutaten',
+      matched: 'mit Preis',
+      unmatched: 'ohne Match',
+      noMatchesTitle: 'Noch keine Zutatenpreise gefunden',
+      noMatchesBody:
+        'Scanne ein paar Kassenbons, damit PlatePlan passende Preise einzelnen Zutaten zuordnen kann.',
+      noPrice: 'Kein Match',
+      basedOn: 'Basierend auf',
+    };
+  }
+
+  return {
+    title: 'Cost breakdown',
+    subtitle: 'Based on the latest matching scanned receipt items.',
+    total: 'Matched ingredients',
+    matched: 'priced',
+    unmatched: 'unmatched',
+    noMatchesTitle: 'No ingredient prices found yet',
+    noMatchesBody:
+      'Scan a few receipts so PlatePlan can match ingredient names to your price history.',
+    noPrice: 'No match',
+    basedOn: 'Based on',
+  };
 }
 
 function MealDetailSkeleton() {

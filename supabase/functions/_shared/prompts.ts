@@ -57,6 +57,7 @@ Rules:
 - Vary cuisines across the week — do not repeat the same cuisine on consecutive days
 - Include pantryStaples implicitly (do not list them as ingredients in the shopping list)
 - estimatedPriceEur should be a realistic per-serving cost estimate in EUR; use 0 if genuinely unknown
+- preferred_language controls the output language for all user-facing recipe text (title, description, ingredient names, steps, cuisine labels and tags)
 - favoriteDishes is a list of the user's all-time favourite meals — include them or very similar dishes more frequently (aim for at least 1-2 per week if the list is non-empty)\
 `;
 
@@ -65,8 +66,17 @@ export function buildPlanGenerationUserPrompt(params: {
   preferences: object;
   feedbackHistory: object[];
   favoriteDishes: object[];
+  manualRecipes: object[];
   currentMonth: string;
 }): string {
+  const manualRecipesSection =
+    params.manualRecipes.length > 0
+      ? `
+The user has added the following personal recipes to their collection. Include them in the plan where they fit the user's preferences and goals:
+${JSON.stringify(params.manualRecipes, null, 2)}
+`
+      : '';
+
   return `\
 Generate a weekly meal plan starting Monday ${params.weekStart} for a user with these preferences:
 
@@ -78,7 +88,11 @@ ${JSON.stringify(params.feedbackHistory, null, 2)}
 Favourite dishes (include these or very similar dishes at least 1-2 times this week):
 ${JSON.stringify(params.favoriteDishes, null, 2)}
 
-Current month: ${params.currentMonth} (use for seasonal logic)\
+${manualRecipesSection}
+
+Current month: ${params.currentMonth} (use for seasonal logic)
+
+Generate all user-facing recipe text in the preferred_language from the preferences JSON.\
 `;
 }
 

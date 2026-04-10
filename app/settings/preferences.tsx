@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, GestureResponderEvent, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
+import { useI18n } from '../../lib/i18n';
 import { supabase } from '../../lib/supabase';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import type { DietaryRestriction } from '../../types';
@@ -29,18 +30,24 @@ const CUISINE_OPTIONS = [
   { label: 'American', emoji: '🍔' },
 ];
 
-const SEASONALITY_LABELS = ['None', 'Low', 'Some', 'High', 'Always'];
-const COOK_FROM_SCRATCH_LABELS = ['Convenience', 'Mostly prep', 'Mix', 'Mostly scratch', 'Always scratch'];
 const COOK_FROM_SCRATCH_EMOJIS = ['🧊', '🥡', '🍳', '👨‍🍳', '🔥'];
 const COOK_FROM_SCRATCH_COLORS = ['#60A5FA', '#34D399', '#FBBF24', '#F97316', '#EF4444'];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function EditPreferences() {
+  const { t } = useI18n();
   const store = useOnboardingStore();
   const [likedInput, setLikedInput] = useState('');
   const [dislikedInput, setDislikedInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const scratchLabels = [
+    t('settings.scratch.1'),
+    t('settings.scratch.2'),
+    t('settings.scratch.3'),
+    t('settings.scratch.4'),
+    t('settings.scratch.5'),
+  ];
 
   // Load current preferences from DB on mount and populate store
   useEffect(() => {
@@ -54,15 +61,24 @@ export default function EditPreferences() {
         .eq('user_id', session.user.id)
         .single();
 
-      if (!data) return;
+      const row = data as {
+        dietary_restrictions?: DietaryRestriction[];
+        liked_ingredients?: string[];
+        disliked_ingredients?: string[];
+        liked_cuisines?: string[];
+        seasonality_importance?: number;
+        cook_from_scratch_preference?: number;
+      } | null;
+
+      if (!row) return;
 
       // Populate store fields that this screen manages
-      store.setDietaryRestrictions(data.dietary_restrictions ?? []);
-      store.setLikedIngredients(data.liked_ingredients ?? []);
-      store.setDislikedIngredients(data.disliked_ingredients ?? []);
-      store.setLikedCuisines(data.liked_cuisines ?? []);
-      store.setSeasonalityImportance((data.seasonality_importance ?? 3) as 1 | 2 | 3 | 4 | 5);
-      store.setCookFromScratchPreference((data.cook_from_scratch_preference ?? 3) as 1 | 2 | 3 | 4 | 5);
+      store.setDietaryRestrictions(row.dietary_restrictions ?? []);
+      store.setLikedIngredients(row.liked_ingredients ?? []);
+      store.setDislikedIngredients(row.disliked_ingredients ?? []);
+      store.setLikedCuisines(row.liked_cuisines ?? []);
+      store.setSeasonalityImportance((row.seasonality_importance ?? 3) as 1 | 2 | 3 | 4 | 5);
+      store.setCookFromScratchPreference((row.cook_from_scratch_preference ?? 3) as 1 | 2 | 3 | 4 | 5);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -96,13 +112,13 @@ export default function EditPreferences() {
           liked_cuisines: store.likedCuisines,
           seasonality_importance: store.seasonalityImportance,
           cook_from_scratch_preference: store.cookFromScratchPreference,
-        })
+        } as never)
         .eq('user_id', session.user.id);
 
       if (error) throw error;
       router.back();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save preferences');
+      Alert.alert(t('common.error'), err instanceof Error ? err.message : t('settings.save_failed'));
     } finally {
       setSaving(false);
     }
@@ -119,14 +135,14 @@ export default function EditPreferences() {
           <Text className="text-lg">←</Text>
         </Pressable>
         <View className="gap-0.5 flex-1">
-          <Text className="text-2xl font-bold text-[#1A1A2E]">Food preferences</Text>
-          <Text className="text-sm text-[#6B7280]">Changes apply to future meal plans</Text>
+          <Text className="text-2xl font-bold text-[#1A1A2E]">{t('settings.title')}</Text>
+          <Text className="text-sm text-[#6B7280]">{t('settings.subtitle')}</Text>
         </View>
       </View>
 
       {/* Dietary restrictions */}
       <View className="gap-3">
-        <Text className="text-base font-semibold text-[#1A1A2E]">Dietary restrictions</Text>
+        <Text className="text-base font-semibold text-[#1A1A2E]">{t('settings.dietary_restrictions')}</Text>
         <View className="flex-row flex-wrap gap-2">
           {DIETARY_OPTIONS.map((opt) => {
             const selected = store.dietaryRestrictions.includes(opt.value);
@@ -151,12 +167,12 @@ export default function EditPreferences() {
 
       {/* Favourite ingredients */}
       <View className="gap-3">
-        <Text className="text-base font-semibold text-[#1A1A2E]">Favourite ingredients</Text>
-        <Text className="text-sm text-[#6B7280] -mt-1">We'll try to include these in your meals.</Text>
+        <Text className="text-base font-semibold text-[#1A1A2E]">{t('settings.favourite_ingredients')}</Text>
+        <Text className="text-sm text-[#6B7280] -mt-1">{t('settings.favourite_ingredients_hint')}</Text>
         <View className="flex-row gap-2">
           <TextInput
             className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
-            placeholder="e.g. salmon, spinach, chickpeas..."
+            placeholder={t('settings.favourite_ingredients_placeholder')}
             value={likedInput}
             onChangeText={setLikedInput}
             onSubmitEditing={addLiked}
@@ -187,11 +203,11 @@ export default function EditPreferences() {
 
       {/* Disliked ingredients */}
       <View className="gap-3">
-        <Text className="text-base font-semibold text-[#1A1A2E]">Disliked ingredients</Text>
+        <Text className="text-base font-semibold text-[#1A1A2E]">{t('settings.disliked_ingredients')}</Text>
         <View className="flex-row gap-2">
           <TextInput
             className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-[#1A1A2E]"
-            placeholder="e.g. mushrooms, olives..."
+            placeholder={t('settings.disliked_ingredients_placeholder')}
             value={dislikedInput}
             onChangeText={setDislikedInput}
             onSubmitEditing={addDisliked}
@@ -222,8 +238,8 @@ export default function EditPreferences() {
 
       {/* Favourite cuisines */}
       <View className="gap-3">
-        <Text className="text-base font-semibold text-[#1A1A2E]">Favourite cuisines</Text>
-        <Text className="text-sm text-[#6B7280] -mt-1">Select any you enjoy — we'll prioritise these.</Text>
+        <Text className="text-base font-semibold text-[#1A1A2E]">{t('settings.favourite_cuisines')}</Text>
+        <Text className="text-sm text-[#6B7280] -mt-1">{t('settings.favourite_cuisines_hint')}</Text>
         <View className="flex-row flex-wrap gap-2">
           {CUISINE_OPTIONS.map((opt) => {
             const selected = store.likedCuisines.includes(opt.label);
@@ -249,13 +265,19 @@ export default function EditPreferences() {
       {/* Seasonality importance */}
       <View className="gap-3">
         <View className="flex-row justify-between items-baseline">
-          <Text className="text-base font-semibold text-[#1A1A2E]">Seasonal ingredients</Text>
+          <Text className="text-base font-semibold text-[#1A1A2E]">{t('settings.seasonal_ingredients')}</Text>
           <Text className="text-[#2D6A4F] font-bold">
-            {SEASONALITY_LABELS[store.seasonalityImportance - 1]}
+            {[
+              t('settings.seasonality.none'),
+              t('settings.seasonality.low'),
+              t('settings.seasonality.some'),
+              t('settings.seasonality.high'),
+              t('settings.seasonality.always'),
+            ][store.seasonalityImportance - 1]}
           </Text>
         </View>
         <Text className="text-sm text-[#6B7280] -mt-1">
-          How much should we favour seasonal produce?
+          {t('settings.seasonal_ingredients_hint')}
         </Text>
         <View className="flex-row gap-1">
           {([1, 2, 3, 4, 5] as const).map((val) => (
@@ -286,16 +308,16 @@ export default function EditPreferences() {
       {/* Cooking from scratch */}
       <View className="gap-3">
         <View className="flex-row justify-between items-center">
-          <Text className="text-base font-semibold text-[#1A1A2E]">Cooking from scratch</Text>
+          <Text className="text-base font-semibold text-[#1A1A2E]">{t('settings.cooking_from_scratch')}</Text>
           <View className="flex-row items-center gap-1.5">
             <Text className="text-xl">{COOK_FROM_SCRATCH_EMOJIS[store.cookFromScratchPreference - 1]}</Text>
             <Text className="text-sm font-semibold" style={{ color: COOK_FROM_SCRATCH_COLORS[store.cookFromScratchPreference - 1] }}>
-              {COOK_FROM_SCRATCH_LABELS[store.cookFromScratchPreference - 1]}
+              {scratchLabels[store.cookFromScratchPreference - 1]}
             </Text>
           </View>
         </View>
         <Text className="text-sm text-[#6B7280] -mt-1">
-          How much do you prefer cooking from raw ingredients?
+          {t('settings.cooking_from_scratch_hint')}
         </Text>
         <ScratchSlider
           value={store.cookFromScratchPreference}
@@ -303,8 +325,8 @@ export default function EditPreferences() {
           color={COOK_FROM_SCRATCH_COLORS[store.cookFromScratchPreference - 1]}
         />
         <View className="flex-row justify-between">
-          <Text className="text-xs text-[#9CA3AF]">🧊 Convenience</Text>
-          <Text className="text-xs text-[#9CA3AF]">🔥 Always scratch</Text>
+          <Text className="text-xs text-[#9CA3AF]">🧊 {t('settings.convenience')}</Text>
+          <Text className="text-xs text-[#9CA3AF]">🔥 {t('settings.always_scratch')}</Text>
         </View>
       </View>
 
@@ -313,7 +335,7 @@ export default function EditPreferences() {
           <ActivityIndicator color="#2D6A4F" />
         </View>
       ) : (
-        <Button label="Save" onPress={handleSave} />
+        <Button label={t('common.save')} onPress={handleSave} />
       )}
     </ScrollView>
   );

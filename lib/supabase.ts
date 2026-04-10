@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type {
   Automation,
-  AutomationType,
+  AppLanguage,
   MealFeedback,
   MealPlan,
   MealStatus,
@@ -67,6 +67,7 @@ export interface Database {
           max_cook_time_minutes: number;
           shopping_days: number[];
           pantry_staples: string[];
+          preferred_language: string;
           created_at: string;
           updated_at: string;
         };
@@ -95,6 +96,7 @@ export interface Database {
           is_seasonal: boolean;
           season: string;
           estimated_price_eur: number | null;
+          source: string;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['recipes']['Row'], 'id' | 'created_at'>;
@@ -249,6 +251,7 @@ export function mapProfile(
   return {
     id: row.id,
     displayName: row.display_name,
+    email: null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -289,6 +292,7 @@ export function mapUserPreferences(
     maxCookTimeMinutes: row.max_cook_time_minutes,
     shoppingDays: row.shopping_days ?? [],
     pantryStaples: row.pantry_staples ?? [],
+    preferredLanguage: (row.preferred_language ?? 'en') as AppLanguage,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -317,6 +321,7 @@ export function mapRecipe(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     season: row.season as any,
     estimatedPriceEur: row.estimated_price_eur ?? null,
+    source: (row.source ?? 'ai_generated') as Recipe['source'],
     createdAt: row.created_at,
   };
 }
@@ -457,10 +462,119 @@ export async function invokeFunction<TBody, TResponse>(
   name: string,
   body: TBody,
 ): Promise<TResponse> {
-  const { data, error } = await supabase.functions.invoke<TResponse>(name, { body });
+  await ensureFreshSession();
+
+  let result = await supabase.functions.invoke<TResponse>(name, {
+    body: body as Record<string, unknown>,
+  });
+
+  if (isInvalidJwtError(result.error)) {
+    console.warn(`[invokeFunction] ${name} got invalid JWT, refreshing session and retrying once`);
+    await refreshCurrentSession();
+    result = await supabase.functions.invoke<TResponse>(name, {
+      body: body as Record<string, unknown>,
+    });
+  }
+
+  const { data, error } = result;
   if (error) {
-    console.error(`[invokeFunction] ${name} failed:`, error.message);
-    throw new Error(error.message);
+    const errorContext = (error as { context?: unknown }).context;
+    const status =
+      errorContext &&
+      typeof errorContext === 'object' &&
+      'status' in errorContext &&
+      typeof errorContext.status === 'number'
+        ? errorContext.status
+        : null;
+
+    let responseBody: unknown = null;
+
+    if (
+      errorContext &&
+      typeof errorContext === 'object' &&
+      'text' in errorContext &&
+      typeof errorContext.text === 'function'
+    ) {
+      try {
+        const rawBody = await errorContext.text();
+        if (rawBody) {
+          try {
+            responseBody = JSON.parse(rawBody);
+          } catch {
+            responseBody = rawBody;
+          }
+        }
+      } catch (bodyError) {
+        responseBody = `[failed to read body: ${
+          bodyError instanceof Error ? bodyError.message : String(bodyError)
+        }]`;
+      }
+    }
+
+    console.error(`[invokeFunction] ${name} failed`, {
+      message: error.message,
+      status,
+      body: responseBody,
+    });
+
+    throw new Error(
+      status != null ? `${error.message} (status ${status})` : error.message,
+    );
   }
   return data as TResponse;
+}
+
+async function ensureFreshSession() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!session) {
+    throw new Error('Not authenticated');
+  }
+
+  const expiresAtMs = session.expires_at ? session.expires_at * 1000 : null;
+  const willExpireSoon = expiresAtMs != null && expiresAtMs <= Date.now() + 60_000;
+
+  if (willExpireSoon) {
+    await refreshCurrentSession();
+  }
+}
+
+async function refreshCurrentSession() {
+  const { error } = await supabase.auth.refreshSession();
+  if (error) {
+    throw error;
+  }
+}
+
+function isInvalidJwtError(error: { message?: string; context?: unknown } | null): boolean {
+  if (!error) return false;
+
+  const errorContext = error.context;
+  const status =
+    errorContext &&
+    typeof errorContext === 'object' &&
+    'status' in errorContext &&
+    typeof errorContext.status === 'number'
+      ? errorContext.status
+      : null;
+
+  const bodyMessage =
+    errorContext &&
+    typeof errorContext === 'object' &&
+    'body' in errorContext &&
+    typeof errorContext.body === 'object' &&
+    errorContext.body &&
+    'message' in errorContext.body &&
+    typeof errorContext.body.message === 'string'
+      ? errorContext.body.message
+      : null;
+
+  return status === 401 && (bodyMessage === 'Invalid JWT' || error.message === 'Edge Function returned a non-2xx status code');
 }

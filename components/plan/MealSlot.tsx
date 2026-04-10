@@ -1,19 +1,44 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 
+import { getMealSlotLabel, getMealStatusLabel, useI18n } from '../../lib/i18n';
 import { Badge } from '../ui/Badge';
 import type { HydratedMeal, MealStatus } from '../../types';
 
 const STATUS_CYCLE: MealStatus[] = ['recommended', 'planned', 'prepared', 'cooked', 'rated'];
 
-const STATUS_CONFIG: Record<MealStatus, { label: string; variant: 'muted' | 'info' | 'warning' | 'success' | 'default' }> = {
-  recommended: { label: 'Recommended', variant: 'muted' },
-  planned:     { label: 'Planned',      variant: 'info' },
-  prepared:    { label: 'Prepared',     variant: 'warning' },
-  cooked:      { label: 'Cooked',       variant: 'success' },
-  rated:       { label: 'Rated',        variant: 'default' },
-  skipped:     { label: 'Skipped',      variant: 'muted' },
+const STATUS_BUTTON_STYLES: Record<MealStatus, { container: string; title: string; detail: string }> = {
+  recommended: {
+    container: 'bg-[#F0FDF4] border-[#86EFAC]',
+    title: 'text-[#166534]',
+    detail: 'text-[#15803D]',
+  },
+  planned: {
+    container: 'bg-[#EFF6FF] border-[#BFDBFE]',
+    title: 'text-[#1D4ED8]',
+    detail: 'text-[#2563EB]',
+  },
+  prepared: {
+    container: 'bg-[#FFFBEB] border-[#FCD34D]',
+    title: 'text-[#B45309]',
+    detail: 'text-[#D97706]',
+  },
+  cooked: {
+    container: 'bg-[#ECFDF5] border-[#6EE7B7]',
+    title: 'text-[#047857]',
+    detail: 'text-[#059669]',
+  },
+  rated: {
+    container: 'bg-[#F5F3FF] border-[#C4B5FD]',
+    title: 'text-[#6D28D9]',
+    detail: 'text-[#7C3AED]',
+  },
+  skipped: {
+    container: 'bg-[#F3F4F6] border-[#D1D5DB]',
+    title: 'text-[#4B5563]',
+    detail: 'text-[#6B7280]',
+  },
 };
 
 interface MealSlotProps {
@@ -33,20 +58,57 @@ export function MealSlot({
   onSkip,
   onRegenerate,
 }: MealSlotProps) {
+  const { language, t } = useI18n();
   const { recipe } = meal;
   const kcal = recipe.caloriesPerServing;
   const protein = recipe.proteinPerServingG;
   const cookTime = recipe.cookTimeMinutes;
   const isSkipped = meal.status === 'skipped';
+  const statusStyle = STATUS_BUTTON_STYLES[meal.status] ?? STATUS_BUTTON_STYLES.recommended;
+  const currentStatusLabel = getMealStatusLabel(language, meal.status);
+  const nextStatus = getNextStatus(meal.status);
+  const nextStatusLabel = nextStatus ? getMealStatusLabel(language, nextStatus) : null;
+  const primaryActionLabel =
+    meal.status === 'skipped'
+      ? t('meal.undo_skip')
+      : meal.status === 'recommended'
+      ? t('meal.approve')
+      : nextStatusLabel ?? t('meal.skip');
 
-  function handleStatusPress() {
-    if (!onStatusChange || isSkipped) return;
-    const currentIndex = STATUS_CYCLE.indexOf(meal.status);
-    const nextIndex = (currentIndex + 1) % STATUS_CYCLE.length;
-    onStatusChange(meal, STATUS_CYCLE[nextIndex]);
+  function handleStatusAction() {
+    const actions = [];
+
+    if (meal.status === 'skipped') {
+      actions.push({
+        text: t('meal.undo_skip'),
+        onPress: () => onSkip?.(meal),
+      });
+    } else {
+      if (meal.status === 'recommended') {
+        actions.push({
+          text: t('meal.approve'),
+          onPress: () => onApprove?.(meal),
+        });
+      } else if (nextStatus && onStatusChange) {
+        actions.push({
+          text: nextStatusLabel!,
+          onPress: () => onStatusChange(meal, nextStatus),
+        });
+      }
+
+      if (onSkip) {
+        actions.push({
+          text: t('meal.skip'),
+          style: 'destructive' as const,
+          onPress: () => onSkip(meal),
+        });
+      }
+    }
+
+    actions.push({ text: t('common.cancel'), style: 'cancel' as const });
+
+    Alert.alert(recipe.title, currentStatusLabel, actions);
   }
-
-  const statusConfig = STATUS_CONFIG[meal.status] ?? STATUS_CONFIG.recommended;
 
   return (
     <Pressable
@@ -67,11 +129,13 @@ export function MealSlot({
         {/* Slot label + status badge */}
         <View className="flex-row items-center justify-between">
           <Text className={`text-xs font-semibold uppercase tracking-wide ${isSkipped ? 'text-[#9CA3AF] line-through' : 'text-[#9CA3AF]'}`}>
-            {meal.mealSlot}
+            {getMealSlotLabel(language, meal.mealSlot)}
           </Text>
-          <Pressable onPress={handleStatusPress} hitSlop={8}>
-            <Badge label={statusConfig.label} variant={statusConfig.variant} />
-          </Pressable>
+          {meal.batchGroup != null && (
+            <Text className="text-xs font-semibold text-[#2D6A4F]">
+              {t('meal.batch')}
+            </Text>
+          )}
         </View>
 
         {/* Recipe title */}
@@ -86,55 +150,42 @@ export function MealSlot({
               <MacroPill color="#F59E0B" label={`${kcal} kcal`} />
             )}
             {protein != null && (
-              <MacroPill color="#3B82F6" label={`${protein}g protein`} />
+              <MacroPill color="#3B82F6" label={`${protein}g ${t('meal.protein')}`} />
             )}
             {cookTime != null && (
-              <Badge label={`${cookTime} min`} variant="muted" />
+              <Badge label={`${cookTime} ${t('common.minutes_short')}`} variant="muted" />
             )}
             {recipe.estimatedPriceEur != null && (
               <MacroPill color="#059669" label={`€${recipe.estimatedPriceEur.toFixed(2)}`} />
             )}
-            {meal.batchGroup != null && (
-              <Badge label="Batch" variant="info" dot />
-            )}
             {meal.chosenRecipeId && (
-              <Badge label="Swapped" variant="success" dot />
+              <MacroPill color="#2563EB" label={t('meal.swapped')} />
             )}
           </View>
         )}
 
         {/* Action buttons */}
         <View className="flex-row gap-2 mt-1">
-          {meal.status === 'recommended' && !isSkipped && onApprove && (
-            <Pressable
-              onPress={(e) => { e.stopPropagation?.(); onApprove(meal); }}
-              className="flex-1 flex-row items-center justify-center gap-1 py-1.5 rounded-lg bg-[#D8F3DC] border border-[#2D6A4F]"
-            >
-              <Text className="text-xs font-semibold text-[#2D6A4F]">✓ Approve</Text>
-            </Pressable>
-          )}
-          {!isSkipped && onSkip && (
-            <Pressable
-              onPress={(e) => { e.stopPropagation?.(); onSkip(meal); }}
-              className="flex-1 flex-row items-center justify-center gap-1 py-1.5 rounded-lg bg-gray-100 border border-gray-200"
-            >
-              <Text className="text-xs font-semibold text-gray-500">⊘ Skip</Text>
-            </Pressable>
-          )}
-          {isSkipped && onSkip && (
-            <Pressable
-              onPress={(e) => { e.stopPropagation?.(); onSkip(meal); }}
-              className="flex-1 flex-row items-center justify-center gap-1 py-1.5 rounded-lg bg-gray-100 border border-gray-200"
-            >
-              <Text className="text-xs font-semibold text-gray-500">↩ Undo skip</Text>
-            </Pressable>
-          )}
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation?.();
+              handleStatusAction();
+            }}
+            className={`flex-1 px-3 py-2 rounded-xl border ${statusStyle.container}`}
+          >
+            <Text className={`text-xs font-semibold uppercase tracking-wide ${statusStyle.title}`}>
+              {currentStatusLabel}
+            </Text>
+            <Text className={`text-sm font-semibold ${statusStyle.detail}`}>
+              {primaryActionLabel}
+            </Text>
+          </Pressable>
           {onRegenerate && (
             <Pressable
               onPress={(e) => { e.stopPropagation?.(); onRegenerate(meal); }}
-              className="flex-1 flex-row items-center justify-center gap-1 py-1.5 rounded-lg bg-blue-50 border border-blue-200"
+              className="px-4 flex-row items-center justify-center gap-1 py-1.5 rounded-xl bg-blue-50 border border-blue-200"
             >
-              <Text className="text-xs font-semibold text-blue-600">↻ Different</Text>
+              <Text className="text-xs font-semibold text-blue-600">↻ {t('meal.different')}</Text>
             </Pressable>
           )}
         </View>
@@ -154,4 +205,13 @@ function MacroPill({ color, label }: { color: string; label: string }) {
       </Text>
     </View>
   );
+}
+
+function getNextStatus(status: MealStatus): MealStatus | null {
+  const currentIndex = STATUS_CYCLE.indexOf(status);
+  if (currentIndex === -1 || currentIndex === STATUS_CYCLE.length - 1) {
+    return null;
+  }
+
+  return STATUS_CYCLE[currentIndex + 1];
 }

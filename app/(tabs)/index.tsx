@@ -12,6 +12,7 @@ import {
 
 import { DayCard } from '../../components/plan/DayCard';
 import { MealSwapper } from '../../components/plan/MealSwapper';
+import { ShoppingSection } from '../../components/shopping/ShoppingSection';
 import { DayCardSkeleton } from '../../components/ui/Skeleton';
 import {
   useGeneratePlan,
@@ -20,6 +21,7 @@ import {
   useUpdateMealStatus,
 } from '../../hooks/usePlan';
 import { useGenerateShoppingList } from '../../hooks/useShoppingList';
+import { getLocaleForLanguage, useI18n } from '../../lib/i18n';
 import type { HydratedMeal, MealStatus } from '../../types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -39,12 +41,12 @@ function shiftWeek(weekStart: string, delta: -1 | 1): string {
   return d.toISOString().split('T')[0];
 }
 
-function formatWeekRange(weekStart: string): string {
+function formatWeekRange(weekStart: string, locale: string): string {
   const start = new Date(weekStart);
   const end = new Date(weekStart);
   end.setDate(end.getDate() + 6);
   const fmt = (d: Date) =>
-    d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(d);
   return `${fmt(start)} — ${fmt(end)}`;
 }
 
@@ -56,6 +58,7 @@ function todayDayOfWeek(): number {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MealPlanScreen() {
+  const { language, t } = useI18n();
   const [viewingWeekStart, setViewingWeekStart] = useState(getThisMonday());
   const [atTop, setAtTop] = useState(true);
   const [atBottom, setAtBottom] = useState(false);
@@ -71,6 +74,7 @@ export default function MealPlanScreen() {
   const isCurrentWeek = viewingWeekStart === getThisMonday();
   const nextWeekStart = shiftWeek(viewingWeekStart, 1);
   const prevWeekStart = shiftWeek(viewingWeekStart, -1);
+  const locale = getLocaleForLanguage(language);
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const y = e.nativeEvent.contentOffset.y;
@@ -82,12 +86,12 @@ export default function MealPlanScreen() {
 
   function handleRegenerate() {
     Alert.alert(
-      'Regenerate plan',
-      "This will replace this week's meals with a new AI-generated plan. Continue?",
+      t('plan.regenerate_plan_title'),
+      t('plan.regenerate_plan_message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Regenerate',
+          text: t('plan.regenerate'),
           style: 'destructive',
           onPress: () =>
             generatePlan.mutate(viewingWeekStart, {
@@ -143,7 +147,7 @@ export default function MealPlanScreen() {
             onPress={() => setViewingWeekStart(prevWeekStart)}
             className="items-center py-2"
           >
-            <Text className="text-sm font-semibold text-[#2D6A4F]">← Previous week</Text>
+            <Text className="text-sm font-semibold text-[#2D6A4F]">← {t('plan.previous_week')}</Text>
           </TouchableOpacity>
         )}
 
@@ -151,21 +155,21 @@ export default function MealPlanScreen() {
         <View className="flex-row items-center justify-between">
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
-              <Text className="text-2xl font-bold text-[#1A1A2E]">Meal Plan</Text>
+              <Text className="text-2xl font-bold text-[#1A1A2E]">{t('tabs.meal_plan')}</Text>
               {!isCurrentWeek && (
                 <TouchableOpacity onPress={() => setViewingWeekStart(getThisMonday())}>
-                  <Text className="text-sm font-semibold text-[#2D6A4F]">← Today</Text>
+                  <Text className="text-sm font-semibold text-[#2D6A4F]">← {t('plan.go_to_today')}</Text>
                 </TouchableOpacity>
               )}
             </View>
             {plan && (
               <Text className="text-sm text-[#6B7280]">
-                {formatWeekRange(plan.weekStart)}
+                {formatWeekRange(plan.weekStart, locale)}
               </Text>
             )}
             {!plan && !isLoading && (
               <Text className="text-sm text-[#6B7280]">
-                {formatWeekRange(viewingWeekStart)}
+                {formatWeekRange(viewingWeekStart, locale)}
               </Text>
             )}
           </View>
@@ -176,7 +180,7 @@ export default function MealPlanScreen() {
               className="px-4 py-2 rounded-xl bg-[#D8F3DC] active:opacity-70"
             >
               <Text className="text-sm font-semibold text-[#2D6A4F]">
-                {generatePlan.isPending ? 'Generating…' : 'Regenerate'}
+                {generatePlan.isPending ? t('common.generating') : t('plan.regenerate')}
               </Text>
             </TouchableOpacity>
           )}
@@ -187,8 +191,8 @@ export default function MealPlanScreen() {
           <View className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
             <Text className="text-sm text-red-600">
               {regenerateMeal.isError
-                ? 'Failed to regenerate meal. Please try again.'
-                : 'Failed to generate plan. Please try again.'}
+                ? t('plan.failed_regenerate_meal')
+                : t('plan.failed_generate_plan')}
             </Text>
           </View>
         )}
@@ -196,7 +200,7 @@ export default function MealPlanScreen() {
         {/* Regenerating single meal indicator */}
         {regenerateMeal.isPending && (
           <View className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-            <Text className="text-sm text-blue-600">Finding a different meal…</Text>
+            <Text className="text-sm text-blue-600">{t('plan.finding_different_meal')}</Text>
           </View>
         )}
 
@@ -204,19 +208,22 @@ export default function MealPlanScreen() {
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <DayCardSkeleton key={i} />)
         ) : plan ? (
-          plan.days.map(({ dayOfWeek, meals }) => (
-            <DayCard
-              key={dayOfWeek}
-              dayOfWeek={dayOfWeek}
-              meals={meals}
-              isToday={isCurrentWeek && dayOfWeek === todayIndex}
-              onLongPressMeal={(meal) => setSwappingMeal(meal)}
-              onStatusChange={handleStatusChange}
-              onApprove={handleApprove}
-              onSkip={handleSkip}
-              onRegenerate={handleRegenerateMeal}
-            />
-          ))
+          <>
+            {plan.days.map(({ dayOfWeek, meals }) => (
+              <DayCard
+                key={dayOfWeek}
+                dayOfWeek={dayOfWeek}
+                meals={meals}
+                isToday={isCurrentWeek && dayOfWeek === todayIndex}
+                onLongPressMeal={(meal) => setSwappingMeal(meal)}
+                onStatusChange={handleStatusChange}
+                onApprove={handleApprove}
+                onSkip={handleSkip}
+                onRegenerate={handleRegenerateMeal}
+              />
+            ))}
+            <ShoppingSection planId={plan.id} />
+          </>
         ) : (
           <EmptyState
             onGenerate={() =>
@@ -239,10 +246,10 @@ export default function MealPlanScreen() {
           >
             <Text className="text-sm font-semibold text-[#2D6A4F]">
               {generatePlan.isPending
-                ? 'Generating…'
+                ? t('common.generating')
                 : plan
-                ? 'Next week →'
-                : 'Plan next week →'}
+                ? `${t('plan.next_week')} →`
+                : `${t('plan.plan_next_week')} →`}
             </Text>
           </TouchableOpacity>
         )}
@@ -261,12 +268,14 @@ function EmptyState({
   onGenerate: () => void;
   isGenerating: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <View className="flex-1 items-center justify-center gap-4 py-16">
       <Text className="text-5xl">🍽️</Text>
-      <Text className="text-xl font-bold text-[#1A1A2E]">No plan yet</Text>
+      <Text className="text-xl font-bold text-[#1A1A2E]">{t('plan.no_plan_yet')}</Text>
       <Text className="text-sm text-[#6B7280] text-center px-8">
-        Tap below to generate a weekly meal plan.
+        {t('plan.generate_hint')}
       </Text>
       <TouchableOpacity
         onPress={onGenerate}
@@ -274,7 +283,7 @@ function EmptyState({
         className="px-6 py-3 rounded-xl bg-[#2D6A4F] active:opacity-70"
       >
         <Text className="text-white font-semibold">
-          {isGenerating ? 'Generating…' : 'Generate plan'}
+          {isGenerating ? t('common.generating') : t('plan.generate_plan')}
         </Text>
       </TouchableOpacity>
     </View>
