@@ -30,6 +30,7 @@ const CUISINE_OPTIONS = [
 ];
 
 const SEASONALITY_LABELS = ['None', 'Low', 'Some', 'High', 'Always'];
+const COOK_FROM_SCRATCH_LABELS = ['Convenience', 'Mostly prep', 'Mix', 'Mostly scratch', 'Always scratch'];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ export default function EditPreferences() {
       store.setDislikedIngredients(data.disliked_ingredients ?? []);
       store.setLikedCuisines(data.liked_cuisines ?? []);
       store.setSeasonalityImportance((data.seasonality_importance ?? 3) as 1 | 2 | 3 | 4 | 5);
+      store.setCookFromScratchPreference((data.cook_from_scratch_preference ?? 3) as 1 | 2 | 3 | 4 | 5);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -91,6 +93,7 @@ export default function EditPreferences() {
           disliked_ingredients: store.dislikedIngredients,
           liked_cuisines: store.likedCuisines,
           seasonality_importance: store.seasonalityImportance,
+          cook_from_scratch_preference: store.cookFromScratchPreference,
         })
         .eq('user_id', session.user.id);
 
@@ -269,6 +272,43 @@ export default function EditPreferences() {
               <Text
                 className={`text-sm font-bold ${
                   val <= store.seasonalityImportance ? 'text-white' : 'text-gray-400'
+                }`}
+              >
+                {val}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* Cooking from scratch */}
+      <View className="gap-3">
+        <View className="flex-row justify-between items-baseline">
+          <Text className="text-base font-semibold text-[#1A1A2E]">Cooking from scratch</Text>
+          <Text className="text-[#2D6A4F] font-bold">
+            {COOK_FROM_SCRATCH_LABELS[store.cookFromScratchPreference - 1]}
+          </Text>
+        </View>
+        <Text className="text-sm text-[#6B7280] -mt-1">
+          How much do you prefer cooking from raw ingredients?
+        </Text>
+        <View className="flex-row gap-1">
+          {([1, 2, 3, 4, 5] as const).map((val) => (
+            <Pressable
+              key={val}
+              onPress={() => store.setCookFromScratchPreference(val)}
+              className={[
+                'flex-1 py-2 rounded-lg items-center',
+                val <= store.cookFromScratchPreference
+                  ? val === store.cookFromScratchPreference
+                    ? 'bg-[#2D6A4F]'
+                    : 'bg-[#52B788]'
+                  : 'bg-gray-200',
+              ].join(' ')}
+            >
+              <Text
+                className={`text-sm font-bold ${
+                  val <= store.cookFromScratchPreference ? 'text-white' : 'text-gray-400'
                 }`}
               >
                 {val}
