@@ -31,6 +31,8 @@ const CUISINE_OPTIONS = [
 
 const SEASONALITY_LABELS = ['None', 'Low', 'Some', 'High', 'Always'];
 const COOK_FROM_SCRATCH_LABELS = ['Convenience', 'Mostly prep', 'Mix', 'Mostly scratch', 'Always scratch'];
+const COOK_FROM_SCRATCH_EMOJIS = ['🧊', '🥡', '🍳', '👨‍🍳', '🔥'];
+const COOK_FROM_SCRATCH_COLORS = ['#60A5FA', '#34D399', '#FBBF24', '#F97316', '#EF4444'];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -283,11 +285,14 @@ export default function EditPreferences() {
 
       {/* Cooking from scratch */}
       <View className="gap-3">
-        <View className="flex-row justify-between items-baseline">
+        <View className="flex-row justify-between items-center">
           <Text className="text-base font-semibold text-[#1A1A2E]">Cooking from scratch</Text>
-          <Text className="text-[#2D6A4F] font-bold">
-            {COOK_FROM_SCRATCH_LABELS[store.cookFromScratchPreference - 1]}
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-xl">{COOK_FROM_SCRATCH_EMOJIS[store.cookFromScratchPreference - 1]}</Text>
+            <Text className="text-sm font-semibold" style={{ color: COOK_FROM_SCRATCH_COLORS[store.cookFromScratchPreference - 1] }}>
+              {COOK_FROM_SCRATCH_LABELS[store.cookFromScratchPreference - 1]}
+            </Text>
+          </View>
         </View>
         <Text className="text-sm text-[#6B7280] -mt-1">
           How much do you prefer cooking from raw ingredients?
@@ -295,10 +300,11 @@ export default function EditPreferences() {
         <ScratchSlider
           value={store.cookFromScratchPreference}
           onChange={store.setCookFromScratchPreference}
+          color={COOK_FROM_SCRATCH_COLORS[store.cookFromScratchPreference - 1]}
         />
         <View className="flex-row justify-between">
-          <Text className="text-xs text-[#9CA3AF]">Convenience</Text>
-          <Text className="text-xs text-[#9CA3AF]">Always scratch</Text>
+          <Text className="text-xs text-[#9CA3AF]">🧊 Convenience</Text>
+          <Text className="text-xs text-[#9CA3AF]">🔥 Always scratch</Text>
         </View>
       </View>
 
@@ -318,9 +324,11 @@ export default function EditPreferences() {
 function ScratchSlider({
   value,
   onChange,
+  color,
 }: {
   value: 1 | 2 | 3 | 4 | 5;
   onChange: (v: 1 | 2 | 3 | 4 | 5) => void;
+  color: string;
 }) {
   const [trackWidth, setTrackWidth] = useState(0);
 
@@ -335,7 +343,6 @@ function ScratchSlider({
   }
 
   const fillPct = ((value - 1) / 4) * 100;
-  const thumbPct = fillPct;
 
   return (
     <View
@@ -346,34 +353,35 @@ function ScratchSlider({
       onResponderMove={handleResponder}
     >
       {/* Track */}
-      <View className="h-1.5 bg-gray-200 rounded-full">
+      <View className="h-2 bg-gray-200 rounded-full">
         <View
-          className="h-full bg-[#2D6A4F] rounded-full"
-          style={{ width: `${fillPct}%` }}
+          className="h-full rounded-full"
+          style={{ width: `${fillPct}%`, backgroundColor: color }}
         />
       </View>
       {/* Tick marks */}
-      <View className="absolute left-0 right-0 flex-row justify-between px-0 top-[18px]">
+      <View className="absolute left-0 right-0 flex-row justify-between top-[19px]">
         {[0, 1, 2, 3, 4].map((i) => (
           <View
             key={i}
             className="w-1 h-1 rounded-full"
-            style={{ backgroundColor: i <= value - 1 ? '#2D6A4F' : '#D1D5DB' }}
+            style={{ backgroundColor: i <= value - 1 ? color : '#D1D5DB' }}
           />
         ))}
       </View>
       {/* Thumb */}
       <View
-        className="absolute w-5 h-5 bg-[#2D6A4F] rounded-full border-2 border-white"
+        className="absolute w-6 h-6 rounded-full border-2 border-white"
         style={{
-          top: 9,
-          left: `${thumbPct}%`,
-          transform: [{ translateX: -10 }],
-          shadowColor: '#000',
-          shadowOpacity: 0.15,
-          shadowRadius: 3,
-          shadowOffset: { width: 0, height: 1 },
-          elevation: 2,
+          top: 8,
+          left: `${fillPct}%`,
+          backgroundColor: color,
+          transform: [{ translateX: -12 }],
+          shadowColor: color,
+          shadowOpacity: 0.4,
+          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 3,
         }}
       />
     </View>
