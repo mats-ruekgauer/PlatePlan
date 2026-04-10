@@ -163,7 +163,7 @@ export default function StepHousehold() {
           />
           <Button
             label="Join with an invite link"
-            variant="outline"
+            variant="secondary"
             onPress={() => setMode('join')}
           />
         </View>
@@ -185,7 +185,7 @@ export default function StepHousehold() {
           <Button label="Create & generate plan" onPress={handleCreate} />
           <Button
             label="Back"
-            variant="outline"
+            variant="secondary"
             onPress={() => setMode('choose')}
           />
         </View>
@@ -208,7 +208,7 @@ export default function StepHousehold() {
           <Button label="Join & generate plan" onPress={handleJoin} />
           <Button
             label="Back"
-            variant="outline"
+            variant="secondary"
             onPress={() => setMode('choose')}
           />
         </View>

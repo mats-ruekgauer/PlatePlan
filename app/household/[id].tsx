@@ -109,7 +109,7 @@ export default function HouseholdDetailScreen() {
       <View className="gap-2">
         <Button
           label={shareInvite.isPending ? 'Generating link…' : 'Invite someone'}
-          variant="outline"
+          variant="secondary"
           onPress={handleShareInvite}
         />
       </View>

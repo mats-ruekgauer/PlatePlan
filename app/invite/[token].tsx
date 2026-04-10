@@ -81,7 +81,7 @@ export default function InviteScreen() {
           <Button label="Join household" onPress={handleJoin} />
           <Button
             label="Cancel"
-            variant="outline"
+            variant="secondary"
             onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
           />
         </View>
