@@ -13,7 +13,8 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|zustand)',
   ],
-  setupFilesAfterFramework: [],
+  setupFiles: ['./jest.setup.ts'],
+  setupFilesAfterEnv: [],
   moduleNameMapper: {
     // Silence RN asset imports in tests
     '\\.(png|jpg|jpeg|gif|svg)$': '<rootDir>/__mocks__/fileMock.js',
