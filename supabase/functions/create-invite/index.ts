@@ -1,0 +1,105 @@
+// supabase/functions/create-invite/index.ts
+// Generates a new invite link for a household, invalidating any existing tokens.
+// Body: { householdId: string; usageLimit?: number; expiryDays?: number }
+// Returns: { inviteLink: string; expiresAt: string }
+
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+const APP_SCHEME = Deno.env.get('APP_SCHEME') ?? 'plateplan';
+
+/** Generates a 256-bit URL-safe base64 token and its SHA-256 hex hash. */
+async function generateInviteToken(): Promise<{ token: string; tokenHash: string }> {
+  const rawBytes = new Uint8Array(32);
+  crypto.getRandomValues(rawBytes);
+  const token = btoa(String.fromCharCode(...rawBytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  const data = new TextEncoder().encode(token);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const tokenHash = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return { token, tokenHash };
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return cors(new Response('ok'));
+
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) return errorResponse('Missing Authorization header', 401);
+    const jwt = authHeader.replace('Bearer ', '');
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    if (authError || !user) return errorResponse('Unauthorized', 401);
+
+    const body = await req.json() as {
+      householdId: string;
+      usageLimit?: number;
+      expiryDays?: number;
+    };
+    if (!body.householdId) return errorResponse('householdId is required', 400);
+
+    // Verify caller is a member of this household
+    const { data: membership } = await supabase
+      .from('household_members')
+      .select('role')
+      .eq('household_id', body.householdId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!membership) return errorResponse('Forbidden: not a member of this household', 403);
+
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    // Invalidate all existing invite tokens for this household
+    await serviceClient
+      .from('household_invites')
+      .delete()
+      .eq('household_id', body.householdId);
+
+    // Generate new token; store only the hash
+    const { token, tokenHash } = await generateInviteToken();
+    const expiryDays = body.expiryDays ?? 7;
+    const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const { error: insertError } = await serviceClient
+      .from('household_invites')
+      .insert({
+        household_id: body.householdId,
+        token_hash: tokenHash,
+        created_by: user.id,
+        expires_at: expiresAt,
+        usage_limit: body.usageLimit ?? null,
+      });
+
+    if (insertError) throw new Error(`Failed to create invite: ${insertError.message}`);
+
+    const inviteLink = `${APP_SCHEME}://invite/${token}`;
+
+    return cors(Response.json({ inviteLink, expiresAt }));
+  } catch (err) {
+    console.error('[create-invite]', err);
+    return errorResponse(err instanceof Error ? err.message : 'Internal server error', 500);
+  }
+});
+
+function cors(res: Response): Response {
+  res.headers.set('Access-Control-Allow-Origin', '*');
+  res.headers.set('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
+  return res;
+}
+
+function errorResponse(message: string, status: number): Response {
+  return cors(Response.json({ error: message }, { status }));
+}

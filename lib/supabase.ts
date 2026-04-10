@@ -4,6 +4,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type {
   Automation,
   AppLanguage,
+  Household,
+  HouseholdMember,
   MealFeedback,
   MealPlan,
   MealStatus,
@@ -105,7 +107,7 @@ export interface Database {
       meal_plans: {
         Row: {
           id: string;
-          user_id: string;
+          household_id: string;
           week_start: string;
           status: string;
           generated_at: string;
@@ -132,7 +134,7 @@ export interface Database {
       shopping_lists: {
         Row: {
           id: string;
-          user_id: string;
+          household_id: string;
           plan_id: string | null;
           shopping_date: string | null;
           items: unknown; // JSONB — cast at read time
@@ -194,6 +196,46 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['automations']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['automations']['Insert']>;
+      };
+      households: {
+        Row: {
+          id: string;
+          name: string;
+          created_by: string;
+          managed_meal_slots: string[];
+          shopping_days: number[];
+          batch_cook_days: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['households']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['households']['Insert']>;
+      };
+      household_members: {
+        Row: {
+          id: string;
+          household_id: string;
+          user_id: string;
+          role: string;
+          status: string;
+          joined_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['household_members']['Row'], 'id' | 'joined_at' | 'status'>;
+        Update: Partial<Database['public']['Tables']['household_members']['Insert']>;
+      };
+      household_invites: {
+        Row: {
+          id: string;
+          household_id: string;
+          token_hash: string;
+          created_by: string;
+          expires_at: string;
+          usage_limit: number | null;
+          uses_count: number;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['household_invites']['Row'], 'id' | 'created_at' | 'uses_count'>;
+        Update: Partial<Database['public']['Tables']['household_invites']['Insert']>;
       };
     };
   };
@@ -331,7 +373,7 @@ export function mapMealPlan(
 ): MealPlan {
   return {
     id: row.id,
-    userId: row.user_id,
+    householdId: row.household_id,
     weekStart: row.week_start,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: row.status as any,
@@ -362,7 +404,7 @@ export function mapShoppingList(
 ): ShoppingList {
   return {
     id: row.id,
-    userId: row.user_id,
+    householdId: row.household_id,
     planId: row.plan_id,
     shoppingDate: row.shopping_date,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -432,6 +474,38 @@ export function mapAutomation(
   };
 }
 
+export function mapHousehold(
+  row: Database['public']['Tables']['households']['Row'],
+): Household {
+  return {
+    id: row.id,
+    name: row.name,
+    createdBy: row.created_by,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    managedMealSlots: (row.managed_meal_slots ?? []) as any[],
+    shoppingDays: row.shopping_days ?? [],
+    batchCookDays: row.batch_cook_days ?? 1,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function mapHouseholdMember(
+  row: Database['public']['Tables']['household_members']['Row'] & { profiles?: Database['public']['Tables']['profiles']['Row'] | null },
+): HouseholdMember {
+  return {
+    id: row.id,
+    householdId: row.household_id,
+    userId: row.user_id,
+    displayName: row.profiles?.display_name ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    role: row.role as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    status: (row.status ?? 'active') as any,
+    joinedAt: row.joined_at,
+  };
+}
+
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 
 /** Uploads a receipt image and returns the public URL. */
@@ -457,7 +531,13 @@ export async function uploadReceiptImage(
 
 // ─── Edge Function invoker ────────────────────────────────────────────────────
 
-/** Typed wrapper around Supabase Edge Functions that throws on error. */
+/**
+ * Typed wrapper around Supabase Edge Functions.
+ *
+ * - Always ensures a valid, non-expired session before calling (refreshes if needed).
+ * - Uses raw fetch so the full JSON error body is always readable.
+ * - Throws with the actual server error message, never the generic SDK string.
+ */
 export async function invokeFunction<TBody, TResponse>(
   name: string,
   body: TBody,
@@ -521,6 +601,7 @@ export async function invokeFunction<TBody, TResponse>(
       status != null ? `${error.message} (status ${status})` : error.message,
     );
   }
+
   return data as TResponse;
 }
 

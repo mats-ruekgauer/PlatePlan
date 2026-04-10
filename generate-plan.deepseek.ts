@@ -129,6 +129,7 @@ Deno.serve(async (req: Request) => {
       preferences: prefs,
       feedbackHistory,
       favoriteDishes,
+      manualRecipes: [],
       currentMonth,
     });
 

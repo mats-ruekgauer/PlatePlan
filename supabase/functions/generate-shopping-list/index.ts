@@ -40,7 +40,8 @@ Deno.serve(async (req: Request) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const jwt = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
     if (authError || !user) return errorResponse('Unauthorized', 401);
     const userId = user.id;
 
@@ -49,11 +50,11 @@ Deno.serve(async (req: Request) => {
     if (!body.planId) return errorResponse('planId is required', 400);
 
     // ── Load plan + meals + recipes ───────────────────────────────────────────
+    // RLS ensures the user can only see plans for households they belong to
     const { data: plan, error: planError } = await supabase
       .from('meal_plans')
-      .select('id, week_start')
+      .select('id, week_start, household_id')
       .eq('id', body.planId)
-      .eq('user_id', userId)
       .single();
     if (planError || !plan) return errorResponse('Plan not found', 404);
 
@@ -80,7 +81,7 @@ Deno.serve(async (req: Request) => {
       .from('user_preferences')
       .select('pantry_staples, shopping_days')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     const pantryStaples: string[] = (prefs?.pantry_staples ?? []).map((s: string) =>
       s.toLowerCase().trim(),
@@ -148,11 +149,11 @@ Deno.serve(async (req: Request) => {
       .from('shopping_lists')
       .upsert(
         {
-          user_id: userId,
+          household_id: plan.household_id,
           plan_id: body.planId,
           items: allItems,
         },
-        { onConflict: 'user_id,plan_id' } as Record<string, unknown>,
+        { onConflict: 'household_id,plan_id' } as Record<string, unknown>,
       )
       .select('id')
       .single();

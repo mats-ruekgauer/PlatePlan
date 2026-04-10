@@ -69,9 +69,16 @@ export function buildPlanGenerationUserPrompt(params: {
   weekStart: string;
   preferences: object;
   feedbackHistory: object[];
+  favoriteDishes: object[];
   manualRecipes: object[];
   currentMonth: string;
+  memberCount?: number;
 }): string {
+  const householdNote =
+    params.memberCount && params.memberCount > 1
+      ? `\nThis plan is for a household of ${params.memberCount} people. Scale all recipe servings accordingly.`
+      : '';
+
   const manualRecipesSection =
     params.manualRecipes.length > 0
       ? `
@@ -81,18 +88,21 @@ ${JSON.stringify(params.manualRecipes, null, 2)}
       : '';
 
   return `\
-Generate a weekly meal plan starting Monday ${params.weekStart} for a user with these preferences:
+Generate a weekly meal plan starting Monday ${params.weekStart} for a user with these preferences:${householdNote}
 
 ${JSON.stringify(params.preferences, null, 2)}
 
 Feedback history (use this to avoid disliked meals and favour liked ones):
 ${JSON.stringify(params.feedbackHistory, null, 2)}
 
+Favourite dishes (include these or very similar dishes at least 1-2 times this week):
+${JSON.stringify(params.favoriteDishes, null, 2)}
+
 ${manualRecipesSection}
 
 Current month: ${params.currentMonth} (use for seasonal logic)
 
-Generate all user-facing recipe text in the preferredLanguage from the preferences JSON.\
+Generate all user-facing recipe text in the preferred_language from the preferences JSON.\
 `;
 }
 

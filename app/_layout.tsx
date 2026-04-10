@@ -124,6 +124,15 @@ export default function RootLayout() {
             name="recipe/[id]"
             options={{ presentation: 'card', animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="household/[id]"
+            options={{ presentation: 'card', animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="household/setup"
+            options={{ presentation: 'card', animation: 'slide_from_right' }}
+          />
+          <Stack.Screen name="invite/[token]" options={{ presentation: 'modal' }} />
         </Stack>
         <AuthGuard />
       </LanguageProvider>
