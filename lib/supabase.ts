@@ -521,24 +521,48 @@ export async function uploadReceiptImage(
 
 /**
  * Typed wrapper around Supabase Edge Functions.
- * Uses supabase.functions.invoke() so auth is handled by the SDK,
- * but extracts the real error message from the JSON response body.
+ *
+ * - Always ensures a valid, non-expired session before calling (refreshes if needed).
+ * - Uses raw fetch so the full JSON error body is always readable.
+ * - Throws with the actual server error message, never the generic SDK string.
  */
 export async function invokeFunction<TBody, TResponse>(
   name: string,
   body: TBody,
 ): Promise<TResponse> {
-  const { data, error } = await supabase.functions.invoke<TResponse>(name, { body });
-  if (error) {
-    let message = error.message;
-    try {
-      // FunctionsHttpError.context is the raw Response — body not yet consumed
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const errBody = await (error as any).context?.json?.();
-      if (errBody?.error) message = errBody.error;
-    } catch { /* fall back to SDK message */ }
+  // 1. Load current session from SDK (reads AsyncStorage-backed cache)
+  let { data: { session } } = await supabase.auth.getSession();
+
+  // 2. Refresh proactively if the token is missing or expires within 60 s
+  const expiresAt = session?.expires_at != null ? session.expires_at * 1000 : 0;
+  if (!session || expiresAt < Date.now() + 60_000) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    if (refreshed.session) session = refreshed.session;
+  }
+
+  if (!session?.access_token) {
+    throw new Error('Your session has expired. Please sign in again.');
+  }
+
+  // 3. Call the edge function with raw fetch for full response body control
+  const response = await fetch(`${supabaseUrl}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': supabaseAnonKey!,
+    },
+    body: JSON.stringify(body),
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const responseData: any = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message: string = responseData?.error ?? `${name} failed (HTTP ${response.status})`;
     console.warn(`[invokeFunction] ${name}:`, message);
     throw new Error(message);
   }
-  return data as TResponse;
+
+  return responseData as TResponse;
 }
