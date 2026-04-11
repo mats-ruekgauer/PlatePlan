@@ -5,6 +5,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
+from postgrest.exceptions import APIError
 
 from ..dependencies import get_current_user, get_service_client
 from ..models.plan import (
@@ -43,34 +44,156 @@ def upsert_recipe(client, user_id: str, recipe: Recipe) -> str:
     if existing.data:
         return existing.data["id"]
 
-    inserted = (
-        client.from_("recipes")
-        .insert(
-            {
-                "user_id": user_id,
-                "title": recipe.title,
-                "description": recipe.description,
-                "ingredients": [i.model_dump() for i in recipe.ingredients],
-                "steps": recipe.steps,
-                "calories_per_serving": recipe.caloriesPerServing,
-                "protein_per_serving_g": recipe.proteinPerServingG,
-                "carbs_per_serving_g": recipe.carbsPerServingG,
-                "fat_per_serving_g": recipe.fatPerServingG,
-                "servings": recipe.servings,
-                "cook_time_minutes": recipe.cookTimeMinutes,
-                "cuisine": recipe.cuisine,
-                "tags": recipe.tags,
-                "is_seasonal": recipe.isSeasonal,
-                "season": recipe.season,
-                "estimated_price_eur": recipe.estimatedPriceEur,
-                "source": "ai_generated",
-            }
-        )
-        .execute()
-    )
+    payload = {
+        "user_id": user_id,
+        "title": recipe.title,
+        "description": recipe.description,
+        "ingredients": [i.model_dump() for i in recipe.ingredients],
+        "steps": recipe.steps,
+        "calories_per_serving": recipe.caloriesPerServing,
+        "protein_per_serving_g": recipe.proteinPerServingG,
+        "carbs_per_serving_g": recipe.carbsPerServingG,
+        "fat_per_serving_g": recipe.fatPerServingG,
+        "servings": recipe.servings,
+        "cook_time_minutes": recipe.cookTimeMinutes,
+        "cuisine": recipe.cuisine,
+        "tags": recipe.tags,
+        "is_seasonal": recipe.isSeasonal,
+        "season": recipe.season,
+        "estimated_price_eur": recipe.estimatedPriceEur,
+        "source": "ai_generated",
+    }
+    try:
+        inserted = client.from_("recipes").insert(payload).execute()
+    except APIError as exc:
+        if _is_missing_recipe_source_column(exc):
+            logger.warning("recipes.source missing in DB; retrying insert without source column")
+            payload.pop("source", None)
+            inserted = client.from_("recipes").insert(payload).execute()
+        else:
+            raise
     if not inserted.data:
         raise HTTPException(500, detail=f'Failed to insert recipe "{recipe.title}"')
     return inserted.data[0]["id"]
+
+
+def _is_missing_recipe_source_column(exc: APIError) -> bool:
+    return exc.code == "42703" and "recipes.source" in str(exc)
+
+
+def load_manual_recipes(client, user_id: str) -> list[dict]:
+    try:
+        manual_rows = (
+            client.from_("recipes")
+            .select("title, description, cuisine, tags")
+            .eq("user_id", user_id)
+            .eq("source", "manual")
+            .order("created_at", desc=True)
+            .execute()
+        )
+    except APIError as exc:
+        if not _is_missing_recipe_source_column(exc):
+            raise
+
+        logger.warning(
+            "recipes.source missing in DB; falling back to all user recipes for manual recipe prompt context"
+        )
+        manual_rows = (
+            client.from_("recipes")
+            .select("title, description, cuisine, tags")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+
+    return [
+        {
+            "title": r["title"],
+            "description": r["description"],
+            "cuisine": r["cuisine"],
+            "tags": r["tags"] or [],
+        }
+        for r in (manual_rows.data or [])
+    ]
+
+
+def _save_meal_plan(client, household_id: str, week_start: str) -> dict:
+    existing_res = (
+        client.from_("meal_plans")
+        .select("*")
+        .eq("household_id", household_id)
+        .eq("week_start", week_start)
+        .order("generated_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    existing = (existing_res.data or [None])[0]
+
+    if existing:
+        updated = (
+            client.from_("meal_plans")
+            .update({"status": "active"})
+            .eq("id", existing["id"])
+            .execute()
+        )
+        if updated.data:
+            return updated.data[0]
+        return existing
+
+    inserted = (
+        client.from_("meal_plans")
+        .insert({"household_id": household_id, "week_start": week_start, "status": "active"})
+        .execute()
+    )
+    if not inserted.data:
+        raise HTTPException(500, detail="Failed to save meal plan")
+    return inserted.data[0]
+
+
+def _save_planned_meal(
+    client,
+    *,
+    plan_id: str,
+    day_of_week: int,
+    meal_slot: str,
+    recipe_id: str,
+    alternative_recipe_id: str,
+) -> dict:
+    existing_res = (
+        client.from_("planned_meals")
+        .select("*")
+        .eq("plan_id", plan_id)
+        .eq("day_of_week", day_of_week)
+        .eq("meal_slot", meal_slot)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    existing = (existing_res.data or [None])[0]
+
+    payload = {
+        "plan_id": plan_id,
+        "day_of_week": day_of_week,
+        "meal_slot": meal_slot,
+        "recipe_id": recipe_id,
+        "alternative_recipe_id": alternative_recipe_id,
+    }
+
+    if existing:
+        updated = (
+            client.from_("planned_meals")
+            .update(payload)
+            .eq("id", existing["id"])
+            .execute()
+        )
+        if updated.data:
+            return updated.data[0]
+        return existing
+
+    inserted = client.from_("planned_meals").insert(payload).execute()
+    if not inserted.data:
+        raise HTTPException(500, detail="Failed to save planned meal")
+    return inserted.data[0]
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -120,23 +243,7 @@ def generate_plan(
     merged = merge_preferences(prefs_res.data)
 
     # Load manual recipes
-    manual_rows = (
-        client.from_("recipes")
-        .select("title, description, cuisine, tags")
-        .eq("user_id", user_id)
-        .eq("source", "manual")
-        .order("created_at", desc=True)
-        .execute()
-    )
-    manual_recipes = [
-        {
-            "title": r["title"],
-            "description": r["description"],
-            "cuisine": r["cuisine"],
-            "tags": r["tags"] or [],
-        }
-        for r in (manual_rows.data or [])
-    ]
+    manual_recipes = load_manual_recipes(client, user_id)
 
     # Load last 10 feedback entries
     feedback_rows = (
@@ -200,18 +307,7 @@ def generate_plan(
         logger.error("[generate-plan] DeepSeek response validation failed: %s", exc)
         raise HTTPException(502, detail="AI response validation failed") from exc
 
-    # Persist: upsert meal_plan
-    plan_res = (
-        client.from_("meal_plans")
-        .upsert(
-            {"household_id": body.householdId, "week_start": body.weekStart, "status": "active"},
-            on_conflict="household_id,week_start",
-        )
-        .execute()
-    )
-    if not plan_res.data:
-        raise HTTPException(500, detail="Failed to upsert meal plan")
-    meal_plan = plan_res.data[0]
+    meal_plan = _save_meal_plan(client, body.householdId, body.weekStart)
 
     inserted_meals = []
     for day in plan.days:
@@ -219,23 +315,15 @@ def generate_plan(
             primary_id = upsert_recipe(client, user_id, slot.recipe)
             alt_id = upsert_recipe(client, user_id, slot.alternativeRecipe)
 
-            pm_res = (
-                client.from_("planned_meals")
-                .upsert(
-                    {
-                        "plan_id": meal_plan["id"],
-                        "day_of_week": day.dayOfWeek,
-                        "meal_slot": slot.slot,
-                        "recipe_id": primary_id,
-                        "alternative_recipe_id": alt_id,
-                    },
-                    on_conflict="plan_id,day_of_week,meal_slot",
-                )
-                .execute()
+            pm_res = _save_planned_meal(
+                client,
+                plan_id=meal_plan["id"],
+                day_of_week=day.dayOfWeek,
+                meal_slot=slot.slot,
+                recipe_id=primary_id,
+                alternative_recipe_id=alt_id,
             )
-            if not pm_res.data:
-                raise HTTPException(500, detail="Failed to upsert planned meal")
-            inserted_meals.append(pm_res.data[0])
+            inserted_meals.append(pm_res)
 
     return {"planId": meal_plan["id"], "meals": inserted_meals}
 

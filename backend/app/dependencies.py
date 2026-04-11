@@ -1,5 +1,6 @@
-import json
 import logging
+import json
+from typing import Any
 
 import httpx
 import jwt as pyjwt
@@ -13,16 +14,17 @@ from .config import settings
 logger = logging.getLogger(__name__)
 
 # Module-level JWKS cache: kid -> public key object
-_jwks_cache: dict = {}
+_jwks_cache: dict[str, Any] = {}
 
 
 def _load_jwks() -> None:
     """Fetch Supabase JWKS and populate the cache."""
-    url = f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+    url = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/.well-known/jwks.json"
     try:
         resp = httpx.get(url, timeout=10)
         resp.raise_for_status()
         keys = resp.json().get("keys", [])
+        _jwks_cache.clear()
         for k in keys:
             kid = k.get("kid")
             if not kid:
@@ -44,6 +46,43 @@ def _get_public_key(kid: str):
     return _jwks_cache.get(kid)
 
 
+def _decode_hs256(token: str) -> dict[str, Any]:
+    if not settings.SUPABASE_JWT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="HS256 token received but SUPABASE_JWT_SECRET is not configured",
+        )
+
+    return pyjwt.decode(
+        token,
+        settings.SUPABASE_JWT_SECRET,
+        algorithms=["HS256"],
+        options={"verify_aud": False},
+    )
+
+
+def _decode_asymmetric(token: str, alg: str, kid: str | None) -> dict[str, Any]:
+    if not kid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing key id",
+        )
+
+    public_key = _get_public_key(kid)
+    if public_key is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Unknown signing key: {kid}",
+        )
+
+    return pyjwt.decode(
+        token,
+        public_key,
+        algorithms=[alg],
+        options={"verify_aud": False},
+    )
+
+
 def get_current_user(authorization: str = Header(...)) -> str:
     if not authorization.startswith("Bearer "):
         raise HTTPException(
@@ -56,26 +95,9 @@ def get_current_user(authorization: str = Header(...)) -> str:
         alg = header.get("alg", "HS256")
 
         if alg == "HS256":
-            payload = pyjwt.decode(
-                token,
-                settings.SUPABASE_JWT_SECRET,
-                algorithms=["HS256"],
-                options={"verify_aud": False},
-            )
+            payload = _decode_hs256(token)
         elif alg in ("ES256", "RS256"):
-            kid = header.get("kid")
-            public_key = _get_public_key(kid) if kid else None
-            if public_key is None:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"Unknown signing key: {kid}",
-                )
-            payload = pyjwt.decode(
-                token,
-                public_key,
-                algorithms=[alg],
-                options={"verify_aud": False},
-            )
+            payload = _decode_asymmetric(token, alg, header.get("kid"))
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -93,6 +115,7 @@ def get_current_user(authorization: str = Header(...)) -> str:
     except HTTPException:
         raise
     except InvalidTokenError as exc:
+        logger.error("JWT decode failed: %s | header: %s", exc, header if "header" in locals() else None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {exc}",

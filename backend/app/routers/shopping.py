@@ -52,6 +52,37 @@ def _date_for_day(week_start: date, dow: int) -> date:
     return week_start + timedelta(days=offset)
 
 
+def _save_shopping_list(client, household_id: str, plan_id: str, items: list[dict]) -> str | None:
+    existing = (
+        client.from_("shopping_lists")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("plan_id", plan_id)
+        .maybe_single()
+        .execute()
+    )
+
+    if existing.data:
+        saved = (
+            client.from_("shopping_lists")
+            .update({"items": items})
+            .eq("id", existing.data["id"])
+            .execute()
+        )
+        if saved.data:
+            return saved.data[0]["id"]
+        return existing.data["id"]
+
+    inserted = (
+        client.from_("shopping_lists")
+        .insert({"household_id": household_id, "plan_id": plan_id, "items": items})
+        .execute()
+    )
+    if inserted.data:
+        return inserted.data[0]["id"]
+    return None
+
+
 def _group_by_shopping_day(
     items: list[dict],
     planned_meals: list[dict],
@@ -218,19 +249,12 @@ def generate_shopping_list(
     grouped = _group_by_shopping_day(all_items, planned_meals, shopping_days, week_start)
 
     # Persist shopping list
-    save_res = (
-        client.from_("shopping_lists")
-        .upsert(
-            {"household_id": plan["household_id"], "plan_id": body.planId, "items": all_items},
-            on_conflict="household_id,plan_id",
-        )
-        .execute()
-    )
-    if not save_res.data:
+    list_id = _save_shopping_list(client, plan["household_id"], body.planId, all_items)
+    if not list_id:
         logger.warning("[generate-shopping-list] save warning: no data returned")
 
     return {
-        "listId": save_res.data[0]["id"] if save_res.data else None,
+        "listId": list_id,
         "grouped": grouped,
         "allItems": all_items,
     }
