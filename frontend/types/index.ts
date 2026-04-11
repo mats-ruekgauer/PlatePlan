@@ -83,12 +83,9 @@ export interface UserPreferences {
   cookFromScratchPreference: 1 | 2 | 3 | 4 | 5;
   preferredLanguage: AppLanguage;
   // Planning
-  managedMealSlots: MealSlot[];
   unmanagedSlotCalories: Partial<Record<MealSlot, number>>; // e.g. { breakfast: 400 }
-  batchCookDays: number; // 1 | 2 | 3
   maxCookTimeMinutes: number;
   // Shopping
-  shoppingDays: number[]; // 0=Sunday … 6=Saturday
   pantryStaples: string[];
   // Timestamps
   createdAt: string;

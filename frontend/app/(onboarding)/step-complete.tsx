@@ -85,11 +85,8 @@ export default function StepComplete() {
       disliked_ingredients: store.dislikedIngredients,
       liked_cuisines: store.likedCuisines,
       seasonality_importance: store.seasonalityImportance,
-      managed_meal_slots: store.managedMealSlots,
       unmanaged_slot_calories: store.unmanagedSlotCalories,
-      batch_cook_days: store.batchCookDays,
       max_cook_time_minutes: 45,
-      shopping_days: store.shoppingDays,
       pantry_staples: store.pantryStaples,
     }, { onConflict: 'user_id' });
     if (error) throw new Error(`Save preferences failed: ${error.message} (code: ${error.code})`);

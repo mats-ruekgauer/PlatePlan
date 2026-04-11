@@ -62,12 +62,9 @@ export interface Database {
           disliked_ingredients: string[];
           liked_cuisines: string[];
           seasonality_importance: number;
-          managed_meal_slots: string[];
+          cook_from_scratch_preference: number;
           unmanaged_slot_calories: Record<string, number> | null;
-          batch_cook_days: number;
-          prefers_seasonal: boolean;
           max_cook_time_minutes: number;
-          shopping_days: number[];
           pantry_staples: string[];
           preferred_language: string;
           created_at: string;
@@ -320,19 +317,9 @@ export function mapUserPreferences(
     dislikedIngredients: row.disliked_ingredients ?? [],
     likedCuisines: row.liked_cuisines ?? [],
     seasonalityImportance: (row.seasonality_importance ?? 3) as 1 | 2 | 3 | 4 | 5,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cookFromScratchPreference: ((row as any).cook_from_scratch_preference ?? 3) as
-      | 1
-      | 2
-      | 3
-      | 4
-      | 5,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    managedMealSlots: (row.managed_meal_slots ?? []) as any[],
+    cookFromScratchPreference: (row.cook_from_scratch_preference ?? 3) as 1 | 2 | 3 | 4 | 5,
     unmanagedSlotCalories: (row.unmanaged_slot_calories ?? {}) as Record<string, number>,
-    batchCookDays: row.batch_cook_days,
     maxCookTimeMinutes: row.max_cook_time_minutes,
-    shoppingDays: row.shopping_days ?? [],
     pantryStaples: row.pantry_staples ?? [],
     preferredLanguage: (row.preferred_language ?? 'en') as AppLanguage,
     createdAt: row.created_at,

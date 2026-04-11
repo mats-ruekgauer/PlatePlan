@@ -103,12 +103,8 @@ export function useUpdatePreferences() {
       dietaryRestrictions: string[];
       dislikedIngredients: string[];
       likedCuisines: string[];
-      managedMealSlots: string[];
       unmanagedSlotCalories: Record<string, number>;
-      batchCookDays: number;
-      prefersSeasonalIngredients: boolean;
       maxCookTimeMinutes: number;
-      shoppingDays: number[];
       pantryStaples: string[];
       preferredLanguage: 'en' | 'de';
     }>) => {
@@ -127,12 +123,8 @@ export function useUpdatePreferences() {
       if (updates.dietaryRestrictions !== undefined) dbUpdates.dietary_restrictions = updates.dietaryRestrictions;
       if (updates.dislikedIngredients !== undefined) dbUpdates.disliked_ingredients = updates.dislikedIngredients;
       if (updates.likedCuisines !== undefined) dbUpdates.liked_cuisines = updates.likedCuisines;
-      if (updates.managedMealSlots !== undefined) dbUpdates.managed_meal_slots = updates.managedMealSlots;
       if (updates.unmanagedSlotCalories !== undefined) dbUpdates.unmanaged_slot_calories = updates.unmanagedSlotCalories;
-      if (updates.batchCookDays !== undefined) dbUpdates.batch_cook_days = updates.batchCookDays;
-      if (updates.prefersSeasonalIngredients !== undefined) dbUpdates.prefers_seasonal = updates.prefersSeasonalIngredients;
       if (updates.maxCookTimeMinutes !== undefined) dbUpdates.max_cook_time_minutes = updates.maxCookTimeMinutes;
-      if (updates.shoppingDays !== undefined) dbUpdates.shopping_days = updates.shoppingDays;
       if (updates.pantryStaples !== undefined) dbUpdates.pantry_staples = updates.pantryStaples;
       if (updates.preferredLanguage !== undefined) dbUpdates.preferred_language = updates.preferredLanguage;
 

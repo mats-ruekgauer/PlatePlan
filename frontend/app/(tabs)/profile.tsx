@@ -55,7 +55,8 @@ export default function ProfileScreen() {
   const [smsContact, setSmsContact] = useState('');
   const [smsNumber, setSmsNumber] = useState('');
 
-  const isLoading = profileLoading || prefsLoading;
+  const isLoading = profileLoading || prefsLoading || householdsLoading;
+  const activeHousehold = households.find((h) => h.id === activeHouseholdId);
 
   const remindersAuto = automations.find((a) => a.type === 'reminders_export');
   const smsAuto = automations.find((a) => a.type === 'sms_share');
@@ -189,17 +190,17 @@ export default function ProfileScreen() {
           <SummaryRow
             label={t('profile.managed_meals')}
             value={
-              prefs?.managedMealSlots?.length
-                ? prefs.managedMealSlots.join(', ')
+              activeHousehold?.managedMealSlots?.length
+                ? activeHousehold.managedMealSlots.join(', ')
                 : t('common.none')
             }
           />
           <SummaryRow
             label={t('profile.batch_cooking')}
             value={
-              prefs?.batchCookDays === 1
+              activeHousehold?.batchCookDays === 1
                 ? t('profile.cook_fresh_daily')
-                : t('profile.cook_for_days', { days: prefs?.batchCookDays ?? 1 })
+                : t('profile.cook_for_days', { days: activeHousehold?.batchCookDays ?? 1 })
             }
           />
           <SummaryRow
@@ -212,7 +213,7 @@ export default function ProfileScreen() {
           />
           <EditLink
             label={t('profile.edit_meal_slots')}
-            onPress={() => router.push('/(onboarding)/step-meal-slots')}
+            onPress={() => router.push('/settings/household')}
           />
         </Card>
       )}
@@ -357,8 +358,8 @@ export default function ProfileScreen() {
           <SummaryRow
             label={t('profile.shopping_days')}
             value={
-              prefs?.shoppingDays?.length
-                ? prefs.shoppingDays
+              activeHousehold?.shoppingDays?.length
+                ? activeHousehold.shoppingDays
                     .slice()
                     .sort()
                     .map((d) => getWeekdayName(language, d === 0 ? 6 : d - 1, 'short'))
@@ -368,7 +369,7 @@ export default function ProfileScreen() {
           />
           <EditLink
             label={t('profile.edit_shopping_days')}
-            onPress={() => router.push('/(onboarding)/step-shopping-days')}
+            onPress={() => router.push('/settings/household')}
           />
         </Card>
       )}
