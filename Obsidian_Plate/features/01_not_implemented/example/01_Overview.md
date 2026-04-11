@@ -1,6 +1,7 @@
 ## Feature name
 -
-
+## Priority
+(P1 | P2 | P3)
 ## Purpose
 What is this feature supposed to do?
 

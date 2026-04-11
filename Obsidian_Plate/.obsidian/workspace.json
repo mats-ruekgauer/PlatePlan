@@ -4,95 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "d69cae658985891b",
+        "id": "6b19c3c902572cbd",
         "type": "tabs",
         "children": [
           {
-            "id": "84d116a8e6385d29",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/01_not_implemented/example/03_Relations.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "03_Relations"
-            }
-          },
-          {
-            "id": "7d0c73851c82fab9",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/01_not_implemented/example/03_Relations.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "03_Relations"
-            }
-          },
-          {
-            "id": "0e3f6b9504dd8359",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/01_not_implemented/example/03_Relations.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "03_Relations"
-            }
-          },
-          {
-            "id": "dc8f6f279c1651b8",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/01_not_implemented/example/04_UI_Notes.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "04_UI_Notes"
-            }
-          },
-          {
-            "id": "e358c0a8140a7681",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/01_not_implemented/example/03_Relations.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "03_Relations"
-            }
-          },
-          {
-            "id": "4f2950fcfb8e4b18",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/02_current/example/00_Status.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "00_Status"
-            }
-          },
-          {
-            "id": "e1433ba4c08d3610",
+            "id": "fdba5952dbc4affa",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -104,65 +20,8 @@
               "icon": "lucide-file",
               "title": "07_Progress_Log"
             }
-          },
-          {
-            "id": "0bd932989a599d4a",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/02_current/example/08_Open_Issues.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "08_Open_Issues"
-            }
-          },
-          {
-            "id": "0eb276490d072b4e",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/01_not_implemented/example/05_Acceptance_Criteria.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "05_Acceptance_Criteria"
-            }
-          },
-          {
-            "id": "e90f40919cdadd3b",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "ideas/example/01_Idea.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "01_Idea"
-            }
-          },
-          {
-            "id": "920d0938c23f7601",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "ideas/example/01_Idea.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "01_Idea"
-            }
           }
-        ],
-        "currentTab": 10
+        ]
       }
     ],
     "direction": "vertical"
@@ -321,32 +180,43 @@
       "bases:Neue Base erstellen": false
     }
   },
-  "active": "920d0938c23f7601",
+  "active": "08bec9fcdc6fa375",
   "lastOpenFiles": [
-    "ideas/example/02_Next_steps.md",
-    "ideas/example/01_Idea.md",
-    "features/INSTRUCTION.md",
-    "ideas/example/Unbenannt",
-    "ideas/example",
-    "features/03_production/example/09_Final_implementation.md",
-    "features/02_current/example/08_Open_Issues.md",
-    "features/02_current/example/07_Progress_Log.md",
-    "features/02_current/example/00_Status.md",
-    "features/01_not_implemented/example/06_Open_Questions.md",
-    "features/01_not_implemented/example/05_Acceptance_Criteria.md",
-    "features/01_not_implemented/example/04_UI_Notes.md",
-    "features/01_not_implemented/example/03_Relations.md",
-    "features/01_not_implemented/example/02_User_Story.md",
-    "features/01_not_implemented/example/01_Overview.md",
-    "UI_CI",
-    "features/01_not_implemented/example/06_Relations.md",
-    "features/03_production/example",
-    "features/02_current/example",
-    "features/03_production",
-    "features/02_current",
-    "features/01_not_implemented",
-    "features/01_not_implemented/example",
-    "llm_wiki",
-    "Willkommen.md"
+    "features/01_not_implemented/cook-from-scratch-mode/05_Acceptance_Criteria.md",
+    "features/01_not_implemented/cook-from-scratch-mode/01_Overview.md",
+    "features/01_not_implemented/cook-from-scratch-mode",
+    "features/01_not_implemented/automations-reminders/06_Open_Questions.md",
+    "features/01_not_implemented/automations-reminders/05_Acceptance_Criteria.md",
+    "features/01_not_implemented/automations-reminders/01_Overview.md",
+    "features/01_not_implemented/automations-reminders",
+    "features/01_not_implemented/receipt-scanner/06_Open_Questions.md",
+    "features/01_not_implemented/receipt-scanner/05_Acceptance_Criteria.md",
+    "features/01_not_implemented/receipt-scanner/01_Overview.md",
+    "features/01_not_implemented/receipt-scanner",
+    "features/01_not_implemented/dish-list/06_Open_Questions.md",
+    "features/01_not_implemented/dish-list/05_Acceptance_Criteria.md",
+    "features/01_not_implemented/dish-list/02_User_Story.md",
+    "features/01_not_implemented/dish-list/01_Overview.md",
+    "features/01_not_implemented/dish-list",
+    "features/01_not_implemented/favorites-management/06_Open_Questions.md",
+    "features/01_not_implemented/favorites-management/05_Acceptance_Criteria.md",
+    "features/01_not_implemented/favorites-management/02_User_Story.md",
+    "features/01_not_implemented/favorites-management/01_Overview.md",
+    "features/01_not_implemented/favorites-management",
+    "features/03_production/profile-settings/09_Final_implementation.md",
+    "features/03_production/household/09_Final_implementation.md",
+    "features/03_production/meal-feedback/09_Final_implementation.md",
+    "features/03_production/shopping-list/09_Final_implementation.md",
+    "features/03_production/recipe-management/09_Final_implementation.md",
+    "features/03_production/meal-plan-view/09_Final_implementation.md",
+    "features/03_production/meal-plan-generation/09_Final_implementation.md",
+    "features/03_production/onboarding/09_Final_implementation.md",
+    "features/03_production/auth/09_Final_implementation.md",
+    "features/03_production/profile-settings/01_Overview.md",
+    "features/03_production/profile-settings",
+    "features/03_production/household",
+    "features/03_production/meal-feedback",
+    "features/03_production/shopping-list",
+    "features/03_production/recipe-management"
   ]
 }

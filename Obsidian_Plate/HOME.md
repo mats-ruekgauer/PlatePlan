@@ -2,18 +2,17 @@
 > Version: v0.1-dev | Updated: 2026-04-12
 
 ## Status
-MVP in Entwicklung — Onboarding + Meal Plan Flow
+MVP vollständig — Core Features (Auth, Onboarding, Meal Plan, Shopping, Household, Feedback) sind in Produktion. Nächster Fokus: Favoriten + Dish List.
 
 ## Active
-<!-- Claude pflegt diese Section -->
 _Kein aktives Feature_
 
 ## Next (P1)
-→ [[roadmap/backlog]]
+→ [[features/01_not_implemented/favorites-management]] — Quick Win, DB bereits vorhanden
+→ [[features/01_not_implemented/dish-list]] — Hoher User-Value, Kern-Differenzierungsmerkmal
 
 ## Open Bugs
-<!-- Claude pflegt diese Section -->
-_Keine offenen Bugs_
+_Keine bekannten offenen Bugs_
 
 ## Last Release
-_Noch kein Release_
+_v0.1-dev — MVP mit Core Features (2026-04-12)_
