@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { invokeFunction, mapMealFeedback, supabase } from '../lib/supabase';
+import { mapMealFeedback, supabase } from '../lib/supabase';
+import { callAPI } from '../lib/api';
 import { planKeys } from './usePlan';
 import { profileKeys } from './useProfile';
 import type { MealFeedback } from '../types';
@@ -77,10 +78,7 @@ export function useSubmitFeedback() {
 
   return useMutation({
     mutationFn: (input: SubmitFeedbackInput) =>
-      invokeFunction<SubmitFeedbackInput, { feedback: MealFeedback }>(
-        'process-feedback',
-        input,
-      ),
+      callAPI<{ feedback: MealFeedback }>('/api/feedback', input),
     onSuccess: (_data, variables) => {
       // Refresh feedback for this specific meal
       if (variables.plannedMealId) {

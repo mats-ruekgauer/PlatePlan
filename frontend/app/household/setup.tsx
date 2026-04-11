@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
-import { invokeFunction } from '../../lib/supabase';
+import { callAPI } from '../../lib/api';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useHouseholdStore } from '../../stores/householdStore';
 
@@ -35,15 +35,15 @@ export default function StepHousehold() {
     setLoading(true);
     try {
       setStatusText('Creating household...');
-      const result = await invokeFunction<
-        { name: string; managedMealSlots: string[]; shoppingDays: number[]; batchCookDays: number },
-        { householdId: string; inviteLink: string }
-      >('create-household', {
-        name: householdName.trim(),
-        managedMealSlots: store.managedMealSlots,
-        shoppingDays: store.shoppingDays,
-        batchCookDays: store.batchCookDays,
-      });
+      const result = await callAPI<{ householdId: string; inviteLink: string }>(
+        '/api/households',
+        {
+          name: householdName.trim(),
+          managedMealSlots: store.managedMealSlots,
+          shoppingDays: store.shoppingDays,
+          batchCookDays: store.batchCookDays,
+        },
+      );
 
       setActiveHouseholdId(result.householdId);
       store.reset();
@@ -68,10 +68,10 @@ export default function StepHousehold() {
       const token = raw.replace(/^.*plateplan:\/\/invite\//i, '');
 
       setStatusText('Joining household...');
-      const result = await invokeFunction<
-        { token: string },
-        { householdId: string; householdName: string }
-      >('join-household', { token });
+      const result = await callAPI<{ householdId: string; householdName: string }>(
+        '/api/households/join',
+        { token },
+      );
 
       setActiveHouseholdId(result.householdId);
       store.reset();

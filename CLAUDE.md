@@ -2,29 +2,41 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Monorepo Structure
+
+```
+PlatePlan/
+├── frontend/     ← Expo React Native app
+├── backend/      ← FastAPI Python server
+├── supabase/     ← DB migrations + process-receipt edge function
+└── CLAUDE.md
+```
+
 ## Commands
 
 ```bash
-# Development
+# Frontend (run from frontend/)
+cd frontend
 npm start              # Start Expo dev server
 npm run ios            # Run on iOS simulator
 npm run android        # Run on Android emulator
-
-# Type checking & linting
 npm run type-check     # TypeScript noEmit check
 npm run lint           # ESLint on .ts/.tsx files
-
-# Testing
 npm test               # Run Jest tests
-npm run test:watch     # Watch mode
-npm run test:coverage  # Coverage report
+
+# Backend (run from backend/)
+cd backend
+uvicorn app.main:app --reload   # Start FastAPI dev server (port 8000)
+pip install -r requirements.txt  # Install dependencies
 ```
 
 ## Architecture
 
-PlatePlan is an AI-powered meal planning React Native app built with Expo. The text-generation model runs exclusively in Supabase Deno Edge Functions — never in the client.
+PlatePlan is an AI-powered meal planning React Native app built with Expo. All AI and server-side logic runs in a **FastAPI Python backend** (`backend/`). Supabase is used only for auth and database storage.
 
-### Navigation & Auth
+### Frontend (`frontend/`)
+
+#### Navigation & Auth
 
 Expo Router with three route groups:
 - `(auth)/` — welcome, sign-in, sign-up screens
@@ -33,29 +45,36 @@ Expo Router with three route groups:
 
 The root `_layout.tsx` acts as the auth guard: checks Supabase session and whether onboarding is complete, then routes accordingly.
 
-### State Management
+#### State Management
 
 Two separate layers:
 1. **React Query** (`@tanstack/react-query`) — all server/remote state. Cache keys are keyed by `weekStart` date for weekly plan browsing. Hooks live in `hooks/`.
 2. **Zustand** — client-only state. `onboardingStore.ts` persists the multi-step form to AsyncStorage so users can resume mid-flow. `uiStore.ts` handles transient UI state (modals, toasts).
 
-### Data Layer
+#### Data Layer
 
-- **Supabase client** (`lib/supabase.ts`) — full TypeScript type definitions and camelCase mappers (`mapMealPlan`, `mapRecipe`, etc.) that transform snake_case DB rows.
-- **RLS enforces user isolation** on the client (anon key). Edge Functions use the service role key to bypass RLS for writes.
+- **Supabase client** (`lib/supabase.ts`) — full TypeScript type definitions and camelCase mappers (`mapMealPlan`, `mapRecipe`, etc.) that transform snake_case DB rows. Used for auth and direct DB reads.
+- **FastAPI client** (`lib/api.ts`) — `callAPI()` sends requests to the FastAPI backend with the Supabase JWT for auth.
+- **RLS enforces user isolation** on the client (anon key). The FastAPI backend uses the service role key for writes.
 - Key distinction: `PlannedMeal` is the raw DB row; `HydratedMeal` resolves the chosen recipe and is what the UI consumes.
 
-### Edge Functions (Supabase/Deno)
+### Backend (`backend/`)
 
-All AI and complex server logic lives in `supabase/functions/`:
-- `generate-plan/` — full weekly meal plan via DeepSeek
-- `regenerate-meal/` — regenerate a single meal slot
-- `generate-shopping-list/` — aggregate ingredients by category
-- `process-feedback/` — feedback processing (currently on hold)
-- `process-receipt/` — receipt OCR via Anthropic Vision (currently on hold)
-- `_shared/prompts.ts` — shared prompt constants
+FastAPI Python server handling all AI and complex server logic:
+- `POST /api/plan/generate` — full weekly meal plan via DeepSeek
+- `POST /api/plan/regenerate-meal` — regenerate a single meal slot
+- `POST /api/shopping/generate` — aggregate ingredients by category
+- `POST /api/feedback` — feedback processing + auto-blacklist
+- `POST /api/households` — create household + invite token
+- `POST /api/households/join` — join via invite token
+- `POST /api/households/{id}/invite` — rotate invite link
 
-Prompts are centralized in `constants/prompts.ts`. Edge Functions build user-specific prompts dynamically from user preferences and feedback history. Zod validates structured model JSON responses before DB writes. Retry logic uses exponential backoff (3 attempts).
+Auth: all endpoints validate Supabase JWT from `Authorization: Bearer <token>` header.
+
+### Supabase Edge Functions (`supabase/functions/`)
+
+Only one function remains:
+- `process-receipt/` — receipt OCR via Anthropic Vision
 
 ### Styling
 
@@ -63,18 +82,27 @@ NativeWind 4 (Tailwind CSS for React Native). Design tokens (colors, spacing, ty
 
 ## Key Conventions
 
-- **All text-generation API calls go through Edge Functions** — the `DEEPSEEK_API_KEY` is a Supabase secret, never exposed to the client.
+- **All AI calls go through the FastAPI backend** — `DEEPSEEK_API_KEY` is a backend env var, never exposed to the client.
+- **Auth**: Frontend passes the Supabase JWT to FastAPI; FastAPI validates it with `SUPABASE_JWT_SECRET`.
 - **Optimistic updates** — meal status changes update the UI immediately and revert on error.
 - **Mappers** — always use the mapper functions in `lib/supabase.ts` when reading DB rows; never access snake_case fields directly in the UI layer.
 - **React Query cache invalidation** — after any mutation that changes plan data, invalidate the relevant query keys so the UI stays in sync.
 
 ## Environment Variables
 
+### Frontend (`frontend/.env`)
 ```env
 EXPO_PUBLIC_SUPABASE_URL=      # Client-facing Supabase URL
 EXPO_PUBLIC_SUPABASE_ANON_KEY= # Client-facing anon key
-DEEPSEEK_API_KEY=              # Server-side only (Supabase Edge Function secret)
-ANTHROPIC_API_KEY=             # Still used by receipt OCR
+EXPO_PUBLIC_API_URL=           # FastAPI base URL (e.g. http://localhost:8000)
 ```
 
-`DEEPSEEK_API_KEY` and `ANTHROPIC_API_KEY` are set as Supabase secrets, not in `.env`.
+### Backend (`backend/.env`)
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_JWT_SECRET=           # Supabase Dashboard → Settings → API → JWT Secret
+DEEPSEEK_API_KEY=
+```
+
+`ANTHROPIC_API_KEY` is still a Supabase secret (used by `process-receipt` edge function).

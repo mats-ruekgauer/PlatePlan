@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
-  invokeFunction,
   mapMealPlan,
   mapPlannedMeal,
   mapRecipe,
   supabase,
 } from '../lib/supabase';
+import { callAPI } from '../lib/api';
 import { useHouseholdStore } from '../stores/householdStore';
 import type {
   HydratedMeal,
@@ -214,10 +214,7 @@ export function useGeneratePlan() {
   return useMutation({
     mutationFn: (weekStart: string) => {
       if (!householdId) throw new Error('No active household');
-      return invokeFunction<{ weekStart: string; householdId: string }, PlanGenerationResult>(
-        'generate-plan',
-        { weekStart, householdId },
-      );
+      return callAPI<PlanGenerationResult>('/api/plan/generate', { weekStart, householdId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: planKeys.all });
@@ -255,7 +252,7 @@ export function useRegenerateMeal() {
 
   return useMutation({
     mutationFn: (plannedMealId: string) =>
-      invokeFunction<{ plannedMealId: string }, void>('regenerate-meal', { plannedMealId }),
+      callAPI<void>('/api/plan/regenerate-meal', { plannedMealId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: planKeys.all });
     },

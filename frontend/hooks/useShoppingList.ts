@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { invokeFunction, mapShoppingList, supabase } from '../lib/supabase';
+import { mapShoppingList, supabase } from '../lib/supabase';
+import { callAPI } from '../lib/api';
 import type { GroupedShoppingList, ShoppingItem, ShoppingList } from '../types';
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
@@ -43,8 +44,8 @@ export function useGenerateShoppingList() {
 
   return useMutation({
     mutationFn: (planId: string) =>
-      invokeFunction<{ planId: string }, { listId: string; grouped: GroupedShoppingList[]; allItems: ShoppingItem[] }>(
-        'generate-shopping-list',
+      callAPI<{ listId: string; grouped: GroupedShoppingList[]; allItems: ShoppingItem[] }>(
+        '/api/shopping/generate',
         { planId },
       ),
     onSuccess: (_data, planId) => {

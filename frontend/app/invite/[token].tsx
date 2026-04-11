@@ -8,7 +8,7 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
 import { useJoinHousehold } from '../../hooks/useHousehold';
-import { invokeFunction } from '../../lib/supabase';
+import { callAPI } from '../../lib/api';
 import type { PlanGenerationResult } from '../../types';
 
 function getThisMonday(): string {
@@ -30,18 +30,12 @@ export default function InviteScreen() {
 
     // Generate plan for this household (non-fatal if fails)
     try {
-      const planResult = await invokeFunction<
-        { weekStart: string; householdId: string },
-        PlanGenerationResult
-      >('generate-plan', {
+      const planResult = await callAPI<PlanGenerationResult>('/api/plan/generate', {
         weekStart: getThisMonday(),
         householdId: result.householdId,
       });
       if (planResult?.planId) {
-        await invokeFunction<{ planId: string }, unknown>(
-          'generate-shopping-list',
-          { planId: planResult.planId },
-        ).catch(() => null);
+        await callAPI('/api/shopping/generate', { planId: planResult.planId }).catch(() => null);
       }
     } catch {
       // Non-fatal: user can regenerate from the household screen

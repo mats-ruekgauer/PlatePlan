@@ -1,7 +1,8 @@
 import { Share } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { invokeFunction, mapHousehold, mapHouseholdMember, supabase } from '../lib/supabase';
+import { mapHousehold, mapHouseholdMember, supabase } from '../lib/supabase';
+import { callAPI } from '../lib/api';
 import { useHouseholdStore } from '../stores/householdStore';
 import type { Household, HouseholdMember } from '../types';
 
@@ -85,10 +86,7 @@ export function useCreateHousehold() {
       shoppingDays: number[];
       batchCookDays: number;
     }) =>
-      invokeFunction<typeof params, { householdId: string; inviteLink: string }>(
-        'create-household',
-        params,
-      ),
+      callAPI<{ householdId: string; inviteLink: string }>('/api/households', params),
     onSuccess: (data) => {
       setActiveHouseholdId(data.householdId);
       queryClient.invalidateQueries({ queryKey: householdKeys.mine() });
@@ -104,10 +102,7 @@ export function useJoinHousehold() {
 
   return useMutation({
     mutationFn: (token: string) =>
-      invokeFunction<{ token: string }, { householdId: string; householdName: string }>(
-        'join-household',
-        { token },
-      ),
+      callAPI<{ householdId: string; householdName: string }>('/api/households/join', { token }),
     onSuccess: (data) => {
       setActiveHouseholdId(data.householdId);
       setPendingInviteToken(null);
@@ -120,10 +115,10 @@ export function useJoinHousehold() {
 export function useShareInvite() {
   return useMutation({
     mutationFn: async (householdId: string) => {
-      const result = await invokeFunction<
-        { householdId: string },
-        { inviteLink: string; expiresAt: string }
-      >('create-invite', { householdId });
+      const result = await callAPI<{ inviteLink: string; expiresAt: string }>(
+        `/api/households/${householdId}/invite`,
+        {},
+      );
       await Share.share({
         message: `Join my household on PlatePlan! ${result.inviteLink}`,
         url: result.inviteLink,
