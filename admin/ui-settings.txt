@@ -1,0 +1,103 @@
+PlatePlan – UI Design Tokens
+============================
+
+
+COLORS
+------
+
+Primary
+  primary         #2D6A4F   (deep green – main brand color)
+  primaryLight    #52B788   (medium green)
+  primaryXLight   #D8F3DC   (light green tint / backgrounds)
+
+Surfaces
+  surface         #FFFFFF   (white)
+  surfaceSecondary #F8F9FA  (off-white / secondary backgrounds)
+
+Text
+  textPrimary     #1A1A2E   (near-black)
+  textSecondary   #6B7280   (grey)
+  textMuted       #9CA3AF   (light grey)
+
+Borders
+  border          #E5E7EB
+
+Status
+  danger          #DC2626   (red)
+  warning         #D97706   (amber)
+  success         #16A34A   (green)
+
+Nutrition badges
+  calorie         #F59E0B   (yellow-amber)
+  protein         #3B82F6   (blue)
+  carbs           #8B5CF6   (purple)
+  fat             #EC4899   (pink)
+
+
+SPACING
+-------
+
+xs    4 px
+sm    8 px
+md   16 px
+lg   24 px
+xl   32 px
+xxl  48 px
+
+
+BORDER RADIUS
+-------------
+
+sm    6 px
+md   10 px
+lg   16 px
+xl   24 px
+full 999 px  (pill / fully rounded)
+
+
+FONT SIZES
+----------
+
+xs    11 pt
+sm    13 pt
+md    15 pt
+lg    17 pt
+xl    20 pt
+xxl   26 pt
+xxxl  32 pt
+
+
+FONT WEIGHTS
+------------
+
+regular   400
+medium    500
+semibold  600
+bold      700
+
+
+SHADOWS
+-------
+
+sm
+  offset   0 / 1
+  opacity  5 %
+  radius   2
+
+md
+  offset   0 / 2
+  opacity  8 %
+  radius   6
+
+lg
+  offset   0 / 4
+  opacity  12 %
+  radius   12
+
+
+STYLING SYSTEM
+--------------
+
+Framework     NativeWind 4 (Tailwind CSS for React Native)
+Token source  constants/theme.ts
+Tailwind ext  primary / primary-light / primary-xlight registered in tailwind.config.js
