@@ -31,10 +31,25 @@ Struktur:
 - `decisions/` — Architektur-Entscheidungen (Warum X statt Y)
 
 ### `ideas/`
-Rohe Ideen, noch nicht zu Features verfeinert.
+Rohe Ideen, noch nicht zu Features verfeinert. Promotion zu Features ist eine manuelle User-Entscheidung — Claude promoted niemals automatisch.
+
+### `roadmap/`
+- `backlog.md` — Priorisierter Backlog (P1/P2/P3), wird von Claude gepflegt
+
+### `bugs/`
+Bug-Tracking. Zwei Zustände:
+- `open/<name>/` — offen
+- `fixed/<name>/` — gefixt
+
+Vollständiger Workflow: siehe `bugs/INSTRUCTION.md`
+
+### `releases/`
+Changelog. Eine Datei pro Release. Template: `releases/example.md`
 
 ### `UI_CI/`
-Design-Konventionen und Component-Guidelines (zukünftig).
+Design-Konventionen. Bei UI-Arbeit immer zuerst lesen.
+- `design-tokens.md` — Farben, Spacing, Typography (aus `constants/theme.ts`)
+- `patterns.md` — Loading, Error, Empty State Standards
 
 ---
 
@@ -76,6 +91,28 @@ Wenn ein neues Feature geplant wird:
    ```
 7. Nach Fertigstellung: gesamten Ordner nach `features/03_production/` verschieben
 8. `09_Final_implementation.md` aus Example ergänzen
+
+### Session Start
+
+Zu Beginn jeder Session:
+1. `HOME.md` lesen — aktueller Status, aktive Features, offene Bugs, Top-P1
+2. Bei "build [feature]": `features/01_not_implemented/[name]/` lesen
+3. Bei "fix [bug]": `bugs/open/[name]/` lesen
+4. Bei "was als nächstes?" / "work on backlog": `roadmap/backlog.md` lesen → Top P1 nehmen
+5. Bei UI-Arbeit: `UI_CI/` lesen bevor Komponenten gebaut werden
+
+### Backlog pflegen
+
+Wenn ein Feature in `01_not_implemented/` angelegt wird:
+→ Eintrag in `roadmap/backlog.md` hinzufügen (P1/P2/P3 nach Absprache)
+
+Wenn ein Feature nach `02_current/` verschoben wird:
+→ Checkbox in `roadmap/backlog.md` ankreuzen, `[in progress]` ergänzen
+
+Wenn ein Feature nach `03_production/` verschoben wird:
+→ Eintrag aus P1/P2/P3 entfernen, in `## Done` verschieben
+→ Eintrag in aktuellem `releases/` anlegen
+→ `HOME.md` aktualisieren
 
 ### Lint (periodischer Health-Check)
 
