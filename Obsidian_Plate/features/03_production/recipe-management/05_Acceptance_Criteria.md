@@ -1,0 +1,6 @@
+- [x] Recipes Tab mit History + Manual Tabs
+- [x] Recipe Detail Screen
+- [x] Recipe Creation Screen (manuell)
+- [x] AI-generierte Rezepte automatisch gespeichert
+- [x] `mapRecipe()` Mapper genutzt (kein snake_case in UI)
+- [x] JSONB Zutaten + Nährwerte

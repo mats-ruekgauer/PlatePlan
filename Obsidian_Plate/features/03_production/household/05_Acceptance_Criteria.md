@@ -1,0 +1,6 @@
+- [x] Household erstellen via `POST /api/households`
+- [x] Invite-Link generieren + teilen
+- [x] Beitreten via Token `POST /api/households/join`
+- [x] Token rotieren `POST /api/households/{id}/invite`
+- [x] Household-Mitglieder-Liste anzeigen
+- [x] Plan-Generierung berücksichtigt alle Mitglieder-Präferenzen

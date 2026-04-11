@@ -1,0 +1,5 @@
+- [x] Alle Onboarding-Präferenzen nachträglich editierbar
+- [x] Sprache (EN/DE) umschaltbar
+- [x] Logout funktioniert
+- [x] Änderungen in `user_preferences` gespeichert
+- [x] Nächste Plan-Generierung nutzt neue Werte

@@ -1,0 +1,6 @@
+- [x] Shopping List Generierung via `POST /api/shopping/generate`
+- [x] Zutaten kategorisiert angezeigt
+- [x] Pantry-Items herausgefiltert
+- [x] Einkaufstage aus Präferenzen berücksichtigt
+- [x] Artikel abhakbar
+- [x] Liste in `shopping_lists` gespeichert

@@ -1,0 +1,6 @@
+- [x] Wochenplan pro Tag + Meal-Slot angezeigt
+- [x] Wochenwechsel möglich (vor/zurück)
+- [x] React Query Cache keyed by weekStart
+- [x] Meal-Status ändern (optimistisch)
+- [x] Meal Detail Screen mit Rezept + Nährwerten
+- [x] Leerer State mit "Plan generieren" CTA

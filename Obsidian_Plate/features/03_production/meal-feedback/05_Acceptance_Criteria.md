@@ -1,0 +1,4 @@
+- [x] Feedback-Form im Meal Detail Screen
+- [x] Rating gespeichert in `meal_feedback`
+- [x] Auto-Blacklist: negative Zutaten in `user_preferences.blacklisted_ingredients`
+- [x] Nächste Plan-Generierung berücksichtigt Blacklist
