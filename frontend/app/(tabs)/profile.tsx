@@ -14,7 +14,7 @@ import {
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { useMyHouseholds, useShareInvite } from '../../hooks/useHousehold';
+import { useMyHouseholds } from '../../hooks/useHousehold';
 import { usePreferences, useProfile } from '../../hooks/useProfile';
 import { useGeneratePlan } from '../../hooks/usePlan';
 import { useGenerateShoppingList } from '../../hooks/useShoppingList';
@@ -46,7 +46,6 @@ export default function ProfileScreen() {
   const addCustomFavorite = useAddCustomFavorite();
   const removeFavorite = useRemoveFavorite();
   const upsertAutomation = useUpsertAutomation();
-  const shareInvite = useShareInvite();
   const activeHouseholdId = useHouseholdStore((s) => s.activeHouseholdId);
   const setActiveHouseholdId = useHouseholdStore((s) => s.setActiveHouseholdId);
 
@@ -405,7 +404,10 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
-                    onPress={() => shareInvite.mutate(hh.id)}
+                    onPress={() => {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      router.push({ pathname: '/household/invite' as any, params: { id: hh.id } });
+                    }}
                     className="px-2 py-1 rounded-lg border border-[#E5E7EB]"
                   >
                     <Text className="text-xs text-[#6B7280]">Invite</Text>

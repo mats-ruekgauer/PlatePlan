@@ -10,7 +10,6 @@ import {
   useHouseholdMembers,
   useLeaveHousehold,
   useMyHouseholds,
-  useShareInvite,
 } from '../../hooks/useHousehold';
 import { useHouseholdStore } from '../../stores/householdStore';
 
@@ -21,7 +20,6 @@ export default function HouseholdDetailScreen() {
 
   const { data: households } = useMyHouseholds();
   const { data: members, isLoading: membersLoading } = useHouseholdMembers(id);
-  const shareInvite = useShareInvite();
   const leaveHousehold = useLeaveHousehold();
 
   const household = households?.find((h) => h.id === id);
@@ -33,7 +31,8 @@ export default function HouseholdDetailScreen() {
 
   function handleShareInvite() {
     if (!id) return;
-    shareInvite.mutate(id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    router.push({ pathname: '/household/invite' as any, params: { id } });
   }
 
   function handleLeave() {
@@ -108,7 +107,7 @@ export default function HouseholdDetailScreen() {
       {/* Invite */}
       <View className="gap-2">
         <Button
-          label={shareInvite.isPending ? 'Generating link…' : 'Invite someone'}
+          label="Invite someone"
           variant="secondary"
           onPress={handleShareInvite}
         />

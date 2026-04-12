@@ -9,12 +9,13 @@ class CreateHouseholdRequest(BaseModel):
 
 
 class JoinHouseholdRequest(BaseModel):
-    token: str
+    token: str | None = None
+    shortCode: str | None = None
 
 
 class CreateInviteRequest(BaseModel):
     usageLimit: int | None = None
-    expiryDays: int = 7
+    expiryHours: int = 6
 
 
 class UpdateHouseholdRequest(BaseModel):

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Share } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { callAPI } from '../lib/api';
@@ -111,7 +110,7 @@ export function useCreateHousehold() {
       shoppingDays: number[];
       batchCookDays: number;
     }) =>
-      callAPI<{ householdId: string; inviteLink: string }>('/api/households', params),
+      callAPI<{ householdId: string; shortCode: string; expiresAt: string }>('/api/households', params),
     onSuccess: (data) => {
       setActiveHouseholdId(data.householdId);
       queryClient.invalidateQueries({ queryKey: householdKeys.mine() });
@@ -119,15 +118,15 @@ export function useCreateHousehold() {
   });
 }
 
-/** Joins a household via invite token and sets it as active. */
+/** Joins a household via invite token or short code and sets it as active. */
 export function useJoinHousehold() {
   const queryClient = useQueryClient();
   const setActiveHouseholdId = useHouseholdStore((s) => s.setActiveHouseholdId);
   const setPendingInviteToken = useHouseholdStore((s) => s.setPendingInviteToken);
 
   return useMutation({
-    mutationFn: (token: string) =>
-      callAPI<{ householdId: string; householdName: string }>('/api/households/join', { token }),
+    mutationFn: (params: { token?: string; shortCode?: string }) =>
+      callAPI<{ householdId: string; householdName: string }>('/api/households/join', params),
     onSuccess: (data) => {
       setActiveHouseholdId(data.householdId);
       setPendingInviteToken(null);
@@ -136,17 +135,32 @@ export function useJoinHousehold() {
   });
 }
 
-/** Regenerates an invite link for a household (invalidates old) and opens the share sheet. */
+/** Returns the current valid invite (shortCode + expiresAt) without rotating. Creates one if none exists. */
+export function useCurrentInvite(householdId: string | undefined) {
+  return useQuery({
+    queryKey: [...householdKeys.all, householdId, 'current-invite'] as const,
+    queryFn: () =>
+      callAPI<{ shortCode: string; expiresAt: string }>(
+        `/api/households/${householdId}/current-invite`,
+        {},
+      ),
+    enabled: !!householdId,
+    staleTime: 30_000, // re-check every 30s so expiry stays fresh
+  });
+}
+
+/** Rotates the invite (generates a fresh shortCode, invalidates old). Use for "Neuen Code generieren". */
 export function useShareInvite() {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (householdId: string) => {
-      const result = await callAPI<{ inviteLink: string; expiresAt: string }>(
+    mutationFn: (householdId: string) =>
+      callAPI<{ inviteLink: string; shortCode: string; expiresAt: string }>(
         `/api/households/${householdId}/invite`,
         {},
-      );
-      await Share.share({
-        message: `Join my household on PlatePlan! ${result.inviteLink}`,
-        url: result.inviteLink,
+      ),
+    onSuccess: (_data, householdId) => {
+      queryClient.invalidateQueries({
+        queryKey: [...householdKeys.all, householdId, 'current-invite'],
       });
     },
   });

@@ -3,6 +3,22 @@
 Append-only Chronologie aller Operationen. Format:
 `## [YYYY-MM-DD] <operation> | <Titel>`
 
+## [2026-04-12] feature | household — Invite Confirmation Screen + invite-info Endpoint
+- Was: Deep-Link-Screen (`invite/[token].tsx`) zeigt jetzt Confirmation-Dialog mit Haushaltsnamen bevor beigetreten wird. Neuer Backend-Endpoint `POST /api/households/invite-info` gibt `{householdName, householdId}` zurück ohne zu joinen. States: loading → ready ("Möchtest du '[Name]' beitreten?" + Ja/Nein) / not_found ("Haushalt nicht gefunden") / expired ("Einladung abgelaufen") / error. Funktioniert für Short-Code (PP-XXXXXX) und Token-basierte Deep-Links.
+- Betroffene Seiten: entities/household.md
+
+## [2026-04-12] feature | household — QR-Scanner im Join-Flow
+- Was: Join-Mode in `setup.tsx` um QR-Scanner erweitert. "QR-Code scannen"-Button öffnet `CameraView` (expo-camera) als Fullscreen-Modal. Scannt `plateplan://invite/PP-XXXXXX`, extrahiert Short-Code via Regex, joined direkt. Permission-Request automatisch. `scanHandled`-Ref verhindert Doppel-Scan.
+- Betroffene Seiten: entities/household.md
+
+## [2026-04-12] issue | household--invite-flow-redesign (Folgefix: Konsistenz + Mehrfachnutzung)
+- Was: Neuer `current-invite`-Endpoint — gibt bestehenden gültigen Code zurück statt immer zu rotieren. QR-Code codiert `plateplan://invite/PP-XXXXXX` (Short-Code-Format), da Raw-Token nie gespeichert wird. `invite/[token].tsx` erkennt PP-Format und nutzt ShortCode-Join. Echte Restzeit aus `expiresAt` statt Hardcode. `useJoinHousehold` akzeptiert `{token?}` oder `{shortCode?}`. `useCurrentInvite(id)` Hook mit 30s Stale-Time. Mehrfachnutzung: `usage_limit = null` = unbegrenzt (war schon korrekt, jetzt dokumentiert). Collision-Retry in `_insert_new_invite` (5 Versuche).
+- Betroffene Seiten: issues/resolved/household--invite-flow-redesign/04_Resolution.md, entities/household.md
+
+## [2026-04-12] issue | household--invite-flow-redesign
+- Was: Issue umgesetzt — QR-Code-Invite-Screen, Kurz-Code (`PP-XXXXXX`), Join via Kurz-Code, 6h-Ablauf, Share-Nachricht formatiert
+- Betroffene Seiten: issues/resolved/household--invite-flow-redesign/, features/02_current/household/01_Overview.md, HOME.md
+
 ---
 
 ## [2026-04-12] ingest | Initial wiki setup

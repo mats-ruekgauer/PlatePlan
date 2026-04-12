@@ -23,6 +23,9 @@ router = APIRouter()
 # ─── Token helpers ────────────────────────────────────────────────────────────
 
 
+_SHORT_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no O/0, I/1 to avoid confusion
+
+
 def _generate_invite_token() -> tuple[str, str]:
     """Return a (token, sha256_hex_hash) pair. Token is URL-safe base64."""
     raw = os.urandom(32)
@@ -33,6 +36,41 @@ def _generate_invite_token() -> tuple[str, str]:
 
 def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _generate_short_code() -> str:
+    """Return a short code like PP-K7M2A9 (6 chars, no confusables)."""
+    chars = "".join(
+        _SHORT_CODE_CHARS[b % len(_SHORT_CODE_CHARS)] for b in os.urandom(6)
+    )
+    return f"PP-{chars}"
+
+
+def _insert_new_invite(client, household_id: str, user_id: str) -> dict:
+    """Generate a fresh invite row, retrying on short_code collision (astronomically rare)."""
+    for _ in range(5):
+        token, token_hash = _generate_invite_token()
+        short_code = _generate_short_code()
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+        try:
+            res = (
+                client.from_("household_invites")
+                .insert(
+                    {
+                        "household_id": household_id,
+                        "token_hash": token_hash,
+                        "short_code": short_code,
+                        "created_by": user_id,
+                        "expires_at": expires_at,
+                    }
+                )
+                .execute()
+            )
+            if res.data:
+                return {"shortCode": short_code, "expiresAt": expires_at, "inviteLink": f"{settings.APP_SCHEME}://invite/{token}"}
+        except Exception:  # noqa: BLE001
+            continue  # unique constraint violation → retry
+    raise RuntimeError("Failed to generate unique short code after 5 attempts")
 
 
 def _serialize_household(row: dict) -> dict:
@@ -123,23 +161,16 @@ def create_household(
         raise HTTPException(500, detail="Failed to add owner member")
 
     # Create default invite token (non-fatal)
-    invite_link = f"{settings.APP_SCHEME}://invite/"
+    short_code = ""
+    expires_at = ""
     try:
-        token, token_hash = _generate_invite_token()
-        expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-        client.from_("household_invites").insert(
-            {
-                "household_id": household_id,
-                "token_hash": token_hash,
-                "created_by": user_id,
-                "expires_at": expires_at,
-            }
-        ).execute()
-        invite_link = f"{settings.APP_SCHEME}://invite/{token}"
+        invite = _insert_new_invite(client, household_id, user_id)
+        short_code = invite["shortCode"]
+        expires_at = invite["expiresAt"]
     except Exception:  # noqa: BLE001
         pass  # non-fatal
 
-    return {"householdId": household_id, "inviteLink": invite_link}
+    return {"householdId": household_id, "shortCode": short_code, "expiresAt": expires_at}
 
 
 @router.post("/mine")
@@ -173,22 +204,76 @@ def list_my_households(
     return {"households": [_serialize_household(row) for row in households]}
 
 
+@router.post("/invite-info")
+def get_invite_info(
+    body: JoinHouseholdRequest,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Preview an invite (household name) without joining. Used for confirmation screen."""
+    if not body.token and not body.shortCode:
+        raise HTTPException(400, detail="token or shortCode is required")
+
+    client = get_service_client()
+
+    if body.shortCode:
+        invite = maybe_single_data(
+            client.from_("household_invites")
+            .select("expires_at, households(id, name)")
+            .eq("short_code", body.shortCode.upper())
+            .maybe_single()
+            .execute()
+        )
+    else:
+        token_hash = _hash_token(body.token)  # type: ignore[arg-type]
+        invite = maybe_single_data(
+            client.from_("household_invites")
+            .select("expires_at, households(id, name)")
+            .eq("token_hash", token_hash)
+            .maybe_single()
+            .execute()
+        )
+
+    if not invite:
+        raise HTTPException(404, detail="Invite not found")
+
+    if datetime.fromisoformat(invite["expires_at"]) < datetime.now(timezone.utc):
+        raise HTTPException(410, detail="This invite link has expired")
+
+    household = invite.get("households")
+    if not household:
+        raise HTTPException(404, detail="Household not found")
+
+    return {"householdName": household["name"], "householdId": household["id"]}
+
+
 @router.post("/join")
 def join_household(
     body: JoinHouseholdRequest,
     user_id: str = Depends(get_current_user),
 ) -> dict:
-    """Validate invite token and add the calling user to the household."""
+    """Validate invite token or short code and add the calling user to the household."""
+    if not body.token and not body.shortCode:
+        raise HTTPException(400, detail="token or shortCode is required")
+
     client = get_service_client()
 
-    token_hash = _hash_token(body.token)
-    invite = maybe_single_data(
-        client.from_("household_invites")
-        .select("*, households(id, name)")
-        .eq("token_hash", token_hash)
-        .maybe_single()
-        .execute()
-    )
+    if body.shortCode:
+        invite = maybe_single_data(
+            client.from_("household_invites")
+            .select("*, households(id, name)")
+            .eq("short_code", body.shortCode.upper())
+            .maybe_single()
+            .execute()
+        )
+    else:
+        token_hash = _hash_token(body.token)  # type: ignore[arg-type]
+        invite = maybe_single_data(
+            client.from_("household_invites")
+            .select("*, households(id, name)")
+            .eq("token_hash", token_hash)
+            .maybe_single()
+            .execute()
+        )
     if not invite:
         raise HTTPException(404, detail="Invite not found")
 
@@ -282,30 +367,49 @@ def create_invite(
     # Delete existing invites
     client.from_("household_invites").delete().eq("household_id", household_id).execute()
 
-    # Create new invite
-    token, token_hash = _generate_invite_token()
-    expires_at = (
-        datetime.now(timezone.utc) + timedelta(days=body.expiryDays)
-    ).isoformat()
+    # Create new invite (with collision-safe retry)
+    result = _insert_new_invite(client, household_id, user_id)
+    return {"inviteLink": result["inviteLink"], "shortCode": result["shortCode"], "expiresAt": result["expiresAt"]}
 
-    insert_res = (
-        client.from_("household_invites")
-        .insert(
-            {
-                "household_id": household_id,
-                "token_hash": token_hash,
-                "created_by": user_id,
-                "expires_at": expires_at,
-                "usage_limit": body.usageLimit,
-            }
-        )
+
+@router.post("/{household_id}/current-invite")
+def get_current_invite(
+    household_id: str,
+    _body: dict | None = None,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Return the current valid invite (shortCode + expiresAt). Creates a new one only if none exists or all are expired."""
+    client = get_service_client()
+
+    # Verify membership
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("user_id", user_id)
+        .maybe_single()
         .execute()
     )
-    if insert_res.data is None:
-        raise HTTPException(500, detail="Failed to create invite")
+    if not membership:
+        raise HTTPException(403, detail="Forbidden: not a member of this household")
 
-    invite_link = f"{settings.APP_SCHEME}://invite/{token}"
-    return {"inviteLink": invite_link, "expiresAt": expires_at}
+    # Look for an existing valid invite
+    now_iso = datetime.now(timezone.utc).isoformat()
+    existing = maybe_single_data(
+        client.from_("household_invites")
+        .select("short_code, expires_at")
+        .eq("household_id", household_id)
+        .gt("expires_at", now_iso)
+        .maybe_single()
+        .execute()
+    )
+    if existing and existing.get("short_code"):
+        return {"shortCode": existing["short_code"], "expiresAt": existing["expires_at"]}
+
+    # No valid invite — delete stale ones and create fresh
+    client.from_("household_invites").delete().eq("household_id", household_id).execute()
+    result = _insert_new_invite(client, household_id, user_id)
+    return {"shortCode": result["shortCode"], "expiresAt": result["expiresAt"]}
 
 
 @router.post("/{household_id}/update")

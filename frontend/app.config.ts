@@ -19,7 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.plateplan.app',
     infoPlist: {
       NSCameraUsageDescription:
-        'PlatePlan uses the camera to scan grocery receipts so it can track prices and improve your shopping list.',
+        'PlatePlan uses the camera to scan grocery receipts and household invite QR codes.',
       NSPhotoLibraryUsageDescription:
         'PlatePlan can read receipt photos from your library.',
     },
@@ -53,7 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-camera',
       {
         cameraPermission:
-          'PlatePlan uses the camera to scan grocery receipts so it can track prices and improve your shopping list.',
+          'PlatePlan uses the camera to scan grocery receipts and household invite QR codes.',
       },
     ],
   ],

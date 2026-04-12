@@ -15,14 +15,14 @@ Wachstum durch Einladungen. Mehrspieler-Use-Case erhöht Retention.
 
 ## Scope
 - `POST /api/households` — Household erstellen
-- `POST /api/households/join` — via Invite-Token beitreten
-- `POST /api/households/{id}/invite` — Link rotieren
+- `POST /api/households/join` — via Kurz-Code (`PP-XXXXXX`) oder Invite-Token beitreten
+- `POST /api/households/{id}/invite` — Link + Kurz-Code rotieren (6h Ablauf)
 - Household Screen: Mitglieder anzeigen, Einladungslink teilen
 - Präferenz-Merging: Bei Plan-Generierung werden alle Mitglieder-Präferenzen berücksichtigt
-- Invite-Screens: `/invite/[token]`, `/household/setup`
+- Invite-Screens: `/invite/[token]` (Deep-Link), `/household/setup`, `/household/invite` (QR + Kurz-Code)
 
 ## Out of scope
 Rollen-Management über Owner/Member hinaus, Household verlassen
 
 ## Open Issues
-- [[issues/open/household--invite-flow-redesign/01_Issue|Invite Flow Redesign]] — QR-Code-View nach Erstellung, Kurz-Code-Join, Share-Nachricht, 6h-Ablauf
+_Keine_

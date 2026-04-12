@@ -12,7 +12,7 @@ _Kein aktives Feature_
 → [[features/01_not_implemented/dish-list]] — Hoher User-Value, Kern-Differenzierungsmerkmal
 
 ## Open Issues
-→ [[issues/open/household--invite-flow-redesign/01_Issue|household: Invite Flow Redesign]] — QR + Kurz-Code, Share-Nachricht, 6h-Ablauf
+_Keine offenen Issues_
 
 ## Open Bugs
 _Keine bekannten offenen Bugs_
