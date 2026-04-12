@@ -40,6 +40,5 @@ def merge_preferences(members: list[dict]) -> dict:
         "dislikedIngredients": union("disliked_ingredients"),
         "likedCuisines": union("liked_cuisines"),
         "pantryStaples": union("pantry_staples"),
-        "managedMealSlots": union("managed_meal_slots"),
         "memberCount": len(members),
     }

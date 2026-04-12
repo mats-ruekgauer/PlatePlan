@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..dependencies import get_current_user, get_service_client
 from ..models.shopping import GenerateShoppingListRequest
+from ..services.db import maybe_single_data
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ def _date_for_day(week_start: date, dow: int) -> date:
 
 
 def _save_shopping_list(client, household_id: str, plan_id: str, items: list[dict]) -> str | None:
-    existing = (
+    existing = maybe_single_data(
         client.from_("shopping_lists")
         .select("id")
         .eq("household_id", household_id)
@@ -62,16 +63,16 @@ def _save_shopping_list(client, household_id: str, plan_id: str, items: list[dic
         .execute()
     )
 
-    if existing.data:
+    if existing:
         saved = (
             client.from_("shopping_lists")
             .update({"items": items})
-            .eq("id", existing.data["id"])
+            .eq("id", existing["id"])
             .execute()
         )
         if saved.data:
             return saved.data[0]["id"]
-        return existing.data["id"]
+        return existing["id"]
 
     inserted = (
         client.from_("shopping_lists")
@@ -174,7 +175,7 @@ def generate_shopping_list(
     plan = plan_res.data
 
     # Verify user is a household member
-    membership = (
+    membership = maybe_single_data(
         client.from_("household_members")
         .select("id")
         .eq("household_id", plan["household_id"])
@@ -182,7 +183,7 @@ def generate_shopping_list(
         .maybe_single()
         .execute()
     )
-    if not membership.data:
+    if not membership:
         raise HTTPException(403, detail="Forbidden")
 
     # Load planned meals with recipes
@@ -204,16 +205,25 @@ def generate_shopping_list(
     )
     planned_meals = meals_res.data or []
 
-    # Load user preferences for pantry staples and shopping days
-    prefs_res = (
+    # Load pantry staples from user preferences (personal setting)
+    prefs = maybe_single_data(
         client.from_("user_preferences")
-        .select("pantry_staples, shopping_days")
+        .select("pantry_staples")
         .eq("user_id", user_id)
         .maybe_single()
         .execute()
     )
-    pantry_staples = [s.lower().strip() for s in (prefs_res.data or {}).get("pantry_staples") or []]
-    shopping_days: list[int] = (prefs_res.data or {}).get("shopping_days") or []
+    pantry_staples = [s.lower().strip() for s in (prefs or {}).get("pantry_staples") or []]
+
+    # Load shopping days from the household (household-level setting)
+    household_res = (
+        client.from_("households")
+        .select("shopping_days")
+        .eq("id", plan["household_id"])
+        .single()
+        .execute()
+    )
+    shopping_days: list[int] = (household_res.data or {}).get("shopping_days") or []
 
     # Aggregate ingredients by name+unit
     merged: dict[str, dict] = {}

@@ -15,6 +15,7 @@ from ..models.plan import (
     SingleMealResponse,
     Recipe,
 )
+from ..services.db import maybe_single_data
 from ..services.deepseek import call_deepseek_json
 from ..services.prompts import (
     PLAN_GENERATION_SYSTEM_PROMPT,
@@ -33,7 +34,7 @@ DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 
 def upsert_recipe(client, user_id: str, recipe: Recipe) -> str:
     """Insert or reuse a recipe by title+user_id. Returns the recipe UUID."""
-    existing = (
+    existing = maybe_single_data(
         client.from_("recipes")
         .select("id")
         .eq("user_id", user_id)
@@ -41,8 +42,8 @@ def upsert_recipe(client, user_id: str, recipe: Recipe) -> str:
         .maybe_single()
         .execute()
     )
-    if existing.data:
-        return existing.data["id"]
+    if existing:
+        return existing["id"]
 
     payload = {
         "user_id": user_id,
@@ -208,7 +209,7 @@ def generate_plan(
     client = get_service_client()
 
     # Verify caller is a household member
-    membership = (
+    membership = maybe_single_data(
         client.from_("household_members")
         .select("id")
         .eq("household_id", body.householdId)
@@ -216,7 +217,7 @@ def generate_plan(
         .maybe_single()
         .execute()
     )
-    if not membership.data:
+    if not membership:
         raise HTTPException(403, detail="Forbidden: not a member of this household")
 
     # Load all member user IDs
@@ -241,6 +242,28 @@ def generate_plan(
         raise HTTPException(404, detail="No preferences found for household members")
 
     merged = merge_preferences(prefs_res.data)
+
+    # Load household-level planning settings (managed slots, batch cook days)
+    household_res = (
+        client.from_("households")
+        .select("managed_meal_slots, batch_cook_days")
+        .eq("id", body.householdId)
+        .single()
+        .execute()
+    )
+    household = household_res.data or {}
+    merged["managedMealSlots"] = household.get("managed_meal_slots") or ["dinner"]
+    merged["batchCookDays"] = household.get("batch_cook_days") or 1
+
+    # Load the requesting user's preferred language
+    lang_res = maybe_single_data(
+        client.from_("user_preferences")
+        .select("preferred_language")
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    merged["preferredLanguage"] = (lang_res or {}).get("preferred_language", "en")
 
     # Load manual recipes
     manual_recipes = load_manual_recipes(client, user_id)
@@ -350,7 +373,7 @@ def regenerate_meal(
     plan = planned_meal["meal_plans"]
 
     # Verify caller is a household member
-    membership = (
+    membership = maybe_single_data(
         client.from_("household_members")
         .select("id")
         .eq("household_id", plan["household_id"])
@@ -358,7 +381,7 @@ def regenerate_meal(
         .maybe_single()
         .execute()
     )
-    if not membership.data:
+    if not membership:
         raise HTTPException(403, detail="Forbidden")
 
     # Load other meal titles to avoid duplicates

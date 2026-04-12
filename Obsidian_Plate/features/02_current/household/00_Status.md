@@ -1,14 +1,17 @@
 ## Phase
-Production
+In Progress
 
 ## Summary
-Feature ist vollständig implementiert und in Produktion.
+Household erstellen funktioniert grundsätzlich. Supabase-Integration ist aber nicht vollständig up to date — Invite-Flow, Mitglieder-Anzeige und Präferenz-Merging müssen geprüft und stabilisiert werden.
 
 ## Next step
-Keine — shipped.
+1. Supabase-Schema + RLS-Policies prüfen (aktuell?)
+2. Invite-Flow end-to-end testen
+3. Household-Mitglieder-Anzeige verifizieren
+4. Präferenz-Merging bei Plan-Generierung testen
 
 ## Priority
--
+P1
 
 ## Last updated
 2026-04-12

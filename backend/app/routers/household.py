@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from ..dependencies import get_current_user, get_service_client
 from ..models.household import CreateHouseholdRequest, JoinHouseholdRequest, CreateInviteRequest
 from ..config import settings
+from ..services.db import maybe_single_data
 
 router = APIRouter()
 
@@ -99,16 +100,15 @@ def join_household(
     client = get_service_client()
 
     token_hash = _hash_token(body.token)
-    invite_res = (
+    invite = maybe_single_data(
         client.from_("household_invites")
         .select("*, households(id, name)")
         .eq("token_hash", token_hash)
         .maybe_single()
         .execute()
     )
-    if not invite_res.data:
+    if not invite:
         raise HTTPException(404, detail="Invite not found")
-    invite = invite_res.data
 
     if datetime.fromisoformat(invite["expires_at"]) < datetime.now(timezone.utc):
         raise HTTPException(410, detail="This invite link has expired")
@@ -121,7 +121,7 @@ def join_household(
         raise HTTPException(404, detail="Household not found")
 
     # Idempotent: already a member
-    existing = (
+    existing = maybe_single_data(
         client.from_("household_members")
         .select("id")
         .eq("household_id", household["id"])
@@ -129,7 +129,7 @@ def join_household(
         .maybe_single()
         .execute()
     )
-    if existing.data:
+    if existing:
         return {"householdId": household["id"], "householdName": household["name"]}
 
     # Add member
@@ -155,7 +155,7 @@ def create_invite(
     client = get_service_client()
 
     # Verify membership
-    membership = (
+    membership = maybe_single_data(
         client.from_("household_members")
         .select("role")
         .eq("household_id", household_id)
@@ -163,7 +163,7 @@ def create_invite(
         .maybe_single()
         .execute()
     )
-    if not membership.data:
+    if not membership:
         raise HTTPException(403, detail="Forbidden: not a member of this household")
 
     # Delete existing invites

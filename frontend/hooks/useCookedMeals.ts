@@ -52,10 +52,21 @@ export function useCookedMeals() {
     queryKey: recipeKeys.cooked(),
     queryFn: async (): Promise<CookedMealEntry[]> => {
       const userId = await getCurrentUserId();
+
+      // meal_plans has no user_id — look up via household membership
+      const { data: memberships, error: memberErr } = await supabase
+        .from('household_members')
+        .select('household_id')
+        .eq('user_id', userId);
+
+      if (memberErr) throw memberErr;
+      const householdIds = (memberships ?? []).map((m) => m.household_id);
+      if (!householdIds.length) return [];
+
       const { data: plans, error: plansError } = await supabase
         .from('meal_plans')
         .select('id, week_start')
-        .eq('user_id', userId);
+        .in('household_id', householdIds);
 
       if (plansError) throw plansError;
       const planRows =

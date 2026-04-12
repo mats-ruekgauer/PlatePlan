@@ -46,3 +46,10 @@ DEEPSEEK_API_KEY=
 
 Nur noch eine aktive Edge Function:
 - `process-receipt/` — Receipt OCR via Anthropic Vision (hat eigenen `ANTHROPIC_API_KEY` als Supabase Secret)
+- Code liegt in `supabase/functions/process-receipt/index.ts` + `supabase/functions/_shared/prompts.ts`
+
+## DB-Schema-Verwaltung
+
+**Kein lokaler `supabase/migrations/` Ordner** — wurde entfernt. Alle Schema-Änderungen direkt über den **Supabase MCP** (`apply_migration`) auf die Online-DB anwenden. Der MCP ist die einzige Source of Truth für das Schema.
+
+Supabase Projekt-ID: `ntollkfmmkxgokhheqle`

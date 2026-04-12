@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "6b19c3c902572cbd",
+        "id": "7c909e23319f8c4f",
         "type": "tabs",
         "children": [
           {
-            "id": "fdba5952dbc4affa",
+            "id": "ce12d7b36f450321",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "features/02_current/example/07_Progress_Log.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "07_Progress_Log"
+              "title": "Neuer Tab"
             }
           }
         ]
@@ -180,43 +176,43 @@
       "bases:Neue Base erstellen": false
     }
   },
-  "active": "08bec9fcdc6fa375",
+  "active": "ce12d7b36f450321",
   "lastOpenFiles": [
-    "features/01_not_implemented/cook-from-scratch-mode/05_Acceptance_Criteria.md",
-    "features/01_not_implemented/cook-from-scratch-mode/01_Overview.md",
-    "features/01_not_implemented/cook-from-scratch-mode",
-    "features/01_not_implemented/automations-reminders/06_Open_Questions.md",
-    "features/01_not_implemented/automations-reminders/05_Acceptance_Criteria.md",
-    "features/01_not_implemented/automations-reminders/01_Overview.md",
-    "features/01_not_implemented/automations-reminders",
-    "features/01_not_implemented/receipt-scanner/06_Open_Questions.md",
-    "features/01_not_implemented/receipt-scanner/05_Acceptance_Criteria.md",
-    "features/01_not_implemented/receipt-scanner/01_Overview.md",
-    "features/01_not_implemented/receipt-scanner",
-    "features/01_not_implemented/dish-list/06_Open_Questions.md",
-    "features/01_not_implemented/dish-list/05_Acceptance_Criteria.md",
+    "2026-04-12.md",
+    "Unbenannt.canvas",
+    "Unbenannt 1.base",
+    "Unbenannt.base",
+    "llm_wiki/architecture/data-layer.md",
+    "llm_wiki/decisions/align-schema-2026-04-12.md",
+    "features/03_production/household/02_User_Story.md",
+    "features/02_current/household/09_Final_implementation.md",
+    "features/02_current/household/08_Open_Issues.md",
+    "features/02_current/household/07_Progress_Log.md",
+    "features/02_current/household/06_Open_Questions.md",
+    "features/02_current/household/05_Acceptance_Criteria.md",
+    "features/02_current/household/04_UI_Notes.md",
+    "features/02_current/household/03_Relations.md",
+    "features/02_current/household/02_User_Story.md",
+    "features/02_current/household/01_Overview.md",
+    "features/02_current/household/00_Status.md",
+    "features/02_current/household",
+    "features/03_production/household/01_Overview.md",
+    "features/03_production/household/03_Relations.md",
+    "features/03_production/household/00_Status.md",
+    "features/03_production/auth/06_Open_Questions.md",
+    "features/03_production/auth/05_Acceptance_Criteria.md",
+    "features/03_production/auth/03_Relations.md",
+    "CLAUDE.md",
+    "HOME.md",
+    "features/INSTRUCTION.md",
     "features/01_not_implemented/dish-list/02_User_Story.md",
-    "features/01_not_implemented/dish-list/01_Overview.md",
+    "features/01_not_implemented/automations-reminders/04_UI_Notes.md",
+    "features/01_not_implemented/cook-from-scratch-mode",
+    "features/01_not_implemented/automations-reminders",
+    "features/01_not_implemented/receipt-scanner",
     "features/01_not_implemented/dish-list",
-    "features/01_not_implemented/favorites-management/06_Open_Questions.md",
-    "features/01_not_implemented/favorites-management/05_Acceptance_Criteria.md",
-    "features/01_not_implemented/favorites-management/02_User_Story.md",
-    "features/01_not_implemented/favorites-management/01_Overview.md",
     "features/01_not_implemented/favorites-management",
-    "features/03_production/profile-settings/09_Final_implementation.md",
-    "features/03_production/household/09_Final_implementation.md",
-    "features/03_production/meal-feedback/09_Final_implementation.md",
-    "features/03_production/shopping-list/09_Final_implementation.md",
-    "features/03_production/recipe-management/09_Final_implementation.md",
-    "features/03_production/meal-plan-view/09_Final_implementation.md",
-    "features/03_production/meal-plan-generation/09_Final_implementation.md",
-    "features/03_production/onboarding/09_Final_implementation.md",
-    "features/03_production/auth/09_Final_implementation.md",
-    "features/03_production/profile-settings/01_Overview.md",
     "features/03_production/profile-settings",
-    "features/03_production/household",
-    "features/03_production/meal-feedback",
-    "features/03_production/shopping-list",
-    "features/03_production/recipe-management"
+    "features/03_production/household"
   ]
 }

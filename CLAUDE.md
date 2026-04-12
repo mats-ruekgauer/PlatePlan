@@ -2,15 +2,40 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Obsidian Vault — PM Tool & Wissenswiki
+
+Das Projekt nutzt einen Obsidian-Vault unter `Obsidian_Plate/` als kombiniertes PM-Tool und persistentes Wissenswiki.
+
+**Session Start — immer zuerst:**
+1. `Obsidian_Plate/HOME.md` lesen — aktueller Projektstatus, aktive Features, offene Bugs
+2. `Obsidian_Plate/llm_wiki/index.md` lesen — welche Wiki-Seiten existieren
+3. Bei konkreter Aufgabe: relevante `llm_wiki/`-Seiten lesen bevor Code geschrieben wird
+4. Vollständige Anleitung: `Obsidian_Plate/CLAUDE.md`
+
+**Wissen persistent halten:**
+- Neue Architektur-Entscheidungen → `llm_wiki/decisions/`
+- Neue Erkenntnisse über Entities/Conventions → entsprechende `llm_wiki/`-Seite updaten
+- `llm_wiki/index.md` und `llm_wiki/log.md` nach jeder Änderung aktualisieren
+
+**DB-Änderungen:**
+- Supabase-Schema **ausschließlich** über den Supabase MCP direkt auf die Online-DB anwenden (`apply_migration`)
+- Es gibt keinen lokalen `supabase/migrations/` Ordner mehr — der MCP ist die einzige Source of Truth
+- Nach `DROP COLUMN CASCADE` immer `pg_policies` prüfen — Policies werden stillschweigend gelöscht
+
 ## Monorepo Structure
 
 ```
 PlatePlan/
 ├── frontend/     ← Expo React Native app
 ├── backend/      ← FastAPI Python server
-├── supabase/     ← DB migrations + process-receipt edge function
+├── supabase/
+│   └── functions/
+│       ├── process-receipt/   ← einzige verbleibende Edge Function (Receipt OCR via Anthropic)
+│       └── _shared/prompts.ts ← wird von process-receipt importiert
 └── CLAUDE.md
 ```
+
+> DB-Schema wird **nicht** lokal in Migrations-Dateien verwaltet — ausschließlich über den Supabase MCP.
 
 ## Commands
 

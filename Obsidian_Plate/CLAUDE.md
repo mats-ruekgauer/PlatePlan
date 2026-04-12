@@ -44,7 +44,7 @@ Bug-Tracking. Zwei Zustände:
 Vollständiger Workflow: siehe `bugs/INSTRUCTION.md`
 
 ### `releases/`
-Changelog. Eine Datei pro Release. Template: `releases/example.md`
+Changelog. Eine Datei pro Release. Template: `releases/00_example.md`
 
 ### `UI_CI/`
 Design-Konventionen. Bei UI-Arbeit immer zuerst lesen.
@@ -79,10 +79,10 @@ Wenn du etwas Wichtiges über das System lernst, das noch nicht im Wiki steht:
 
 Wenn ein neues Feature geplant wird:
 1. Ordner in `features/01_not_implemented/<feature-name>/` anlegen
-2. Alle Dateien aus `features/01_not_implemented/example/` hineinkopieren
+2. Alle Dateien aus `features/01_not_implemented/00_example/` hineinkopieren
 3. Alle Template-Dateien ausfüllen
 4. Wenn Umsetzung startet: gesamten Ordner nach `features/02_current/` verschieben
-5. Dateien aus `features/02_current/example/` ergänzen (Status, Progress Log, Open Issues)
+5. Dateien aus `features/02_current/00_example/` ergänzen (Status, Progress Log, Open Issues)
 6. Log-Eintrag:
    ```
    ## [YYYY-MM-DD] feature | <feature-name>

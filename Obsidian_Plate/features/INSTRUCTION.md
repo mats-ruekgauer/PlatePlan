@@ -8,7 +8,7 @@ Dieses System strukturiert Features nach ihrem aktuellen Umsetzungsstand.
 - `02_current`
 - `03_production`
 
-Jeder dieser Ordner enthält einen `example`-Ordner als Vorlage für Features in diesem Status.
+Jeder dieser Ordner enthält einen `00_example`-Ordner als Vorlage für Features in diesem Status.
 
 ## Grundprinzip
 

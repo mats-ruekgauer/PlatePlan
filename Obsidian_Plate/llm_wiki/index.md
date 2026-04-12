@@ -35,3 +35,4 @@ Katalog aller Wiki-Seiten. Agents lesen diesen Index zuerst, bevor sie einzelne 
 | Seite | Summary |
 |-------|---------|
 | [[decisions/fastapi-over-edge-functions]] | Warum AI-Calls vom Edge-Function ins FastAPI-Backend wanderten |
+| [[decisions/align-schema-2026-04-12]] | DB/Backend/Frontend-Alignment: RLS-Bugs, Household-Settings, fehlende Columns |
