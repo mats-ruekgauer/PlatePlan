@@ -3,6 +3,8 @@ import { Linking } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getCurrentUserId, mapAutomation, supabase } from '../lib/supabase';
+// supabase is used for reads only (automations, shopping list items for execution)
+import { callAPI } from '../lib/api';
 import type { Automation, AutomationConfig, AutomationType, ShoppingItem } from '../types';
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
@@ -38,7 +40,7 @@ export function useUpsertAutomation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       type,
       enabled,
       config,
@@ -46,33 +48,12 @@ export function useUpsertAutomation() {
       type: AutomationType;
       enabled: boolean;
       config: AutomationConfig;
-    }) => {
-      const userId = await getCurrentUserId();
-
-      // Check if one already exists for this type
-      const { data: existing } = await supabase
-        .from('automations')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('type', type)
-        .maybeSingle();
-
-      if (existing?.id) {
-        const { error } = await supabase
-          .from('automations')
-          .update({ enabled, config: config as Record<string, unknown> })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('automations').insert({
-          user_id: userId,
-          type,
-          enabled,
-          config: config as Record<string, unknown>,
-        });
-        if (error) throw error;
-      }
-    },
+    }) =>
+      callAPI<{ success: boolean; action: string }>('/api/automations/upsert', {
+        type,
+        enabled,
+        config,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: automationKeys.all });
     },
@@ -84,13 +65,8 @@ export function useDeleteAutomation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (automationId: string) => {
-      const { error } = await supabase
-        .from('automations')
-        .delete()
-        .eq('id', automationId);
-      if (error) throw error;
-    },
+    mutationFn: (automationId: string) =>
+      callAPI<{ success: boolean }>('/api/automations/delete', { automationId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: automationKeys.all });
     },
@@ -133,8 +109,9 @@ export function useRunAutomations() {
       const enabled = automations.filter((a) => a.enabled);
       if (enabled.length === 0) return;
 
-      // Load the shopping list for this plan
-      const { data: listRow } = await supabase
+      // Load the shopping list for this plan (plan_id nullable column requires any-cast)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: listRow } = await (supabase as any)
         .from('shopping_lists')
         .select('items')
         .eq('plan_id', planId)

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getCurrentUserId, mapUserFavorite, supabase } from '../lib/supabase';
+import { callAPI } from '../lib/api';
 import type { UserFavorite } from '../types';
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
@@ -41,26 +42,10 @@ export function useIsFavorite(recipeId: string | null | undefined) {
 /** Toggles a recipe in/out of favorites. */
 export function useToggleFavorite() {
   const queryClient = useQueryClient();
-  const { data: favorites = [] } = useFavorites();
 
   return useMutation({
-    mutationFn: async (recipeId: string) => {
-      const userId = await getCurrentUserId();
-      const existing = favorites.find((f) => f.recipeId === recipeId);
-
-      if (existing) {
-        const { error } = await supabase
-          .from('user_favorites')
-          .delete()
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('user_favorites')
-          .insert({ user_id: userId, recipe_id: recipeId });
-        if (error) throw error;
-      }
-    },
+    mutationFn: (recipeId: string) =>
+      callAPI<{ action: 'added' | 'removed' }>('/api/favorites/toggle', { recipeId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: favoriteKeys.all });
     },
@@ -72,15 +57,8 @@ export function useAddCustomFavorite() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ customName, notes }: { customName: string; notes?: string }) => {
-      const userId = await getCurrentUserId();
-      const { error } = await supabase.from('user_favorites').insert({
-        user_id: userId,
-        custom_name: customName,
-        notes: notes ?? null,
-      });
-      if (error) throw error;
-    },
+    mutationFn: ({ customName, notes }: { customName: string; notes?: string }) =>
+      callAPI<{ success: boolean }>('/api/favorites/add-custom', { customName, notes: notes ?? null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: favoriteKeys.all });
     },
@@ -92,13 +70,8 @@ export function useRemoveFavorite() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (favoriteId: string) => {
-      const { error } = await supabase
-        .from('user_favorites')
-        .delete()
-        .eq('id', favoriteId);
-      if (error) throw error;
-    },
+    mutationFn: (favoriteId: string) =>
+      callAPI<{ success: boolean }>('/api/favorites/remove', { favoriteId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: favoriteKeys.all });
     },

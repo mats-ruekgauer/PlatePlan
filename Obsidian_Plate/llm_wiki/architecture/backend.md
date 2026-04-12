@@ -14,19 +14,57 @@ Kein AI-Code im Frontend oder in Supabase Edge Functions (außer `process-receip
 
 ## Endpunkte
 
+### Plan
 | Methode | Pfad | Zweck |
 |---------|------|-------|
 | POST | `/api/plan/generate` | Vollständigen Wochenplan via DeepSeek generieren |
 | POST | `/api/plan/regenerate-meal` | Einzelnen Meal-Slot neu generieren |
+| POST | `/api/plan/swap-meal` | `chosen_recipe_id` für ein Meal setzen |
+| POST | `/api/plan/update-meal-status` | Meal-Status ändern (`recommended` → `cooked` etc.) |
+
+### Shopping
+| Methode | Pfad | Zweck |
+|---------|------|-------|
 | POST | `/api/shopping/generate` | Einkaufsliste nach Kategorie aggregieren |
+| POST | `/api/shopping/toggle-item` | Shopping-Item abhaken/abhaken rückgängig |
+| POST | `/api/shopping/mark-exported` | Liste als exportiert markieren (`exported_at`) |
+
+### Feedback
+| Methode | Pfad | Zweck |
+|---------|------|-------|
 | POST | `/api/feedback` | Feedback verarbeiten + Auto-Blacklist |
+
+### Households
+| Methode | Pfad | Zweck |
+|---------|------|-------|
 | POST | `/api/households` | Household anlegen + Invite-Token erstellen |
-| POST | `/api/households/mine` | Haushalte des aktuellen Users laden |
+| POST | `/api/households/mine` | *(nicht mehr vom Frontend aufgerufen — Reads via Supabase direkt)* |
 | POST | `/api/households/join` | Household via Invite-Token beitreten |
-| POST | `/api/households/{id}/members` | Mitglieder eines Households laden |
+| POST | `/api/households/{id}/members` | *(nicht mehr vom Frontend aufgerufen — Reads via Supabase direkt)* |
 | POST | `/api/households/{id}/invite` | Invite-Link rotieren |
 | POST | `/api/households/{id}/update` | Household-Settings updaten |
 | POST | `/api/households/{id}/leave` | Aus Household austreten |
+
+> Household-Reads (`mine`, `members`) wurden auf Supabase-Direct-Read umgestellt (2026-04-12). Die FastAPI-Endpunkte bleiben im Backend, werden aber nicht mehr vom Frontend genutzt.
+
+### Profile
+| Methode | Pfad | Zweck |
+|---------|------|-------|
+| POST | `/api/profile/update-display-name` | Display-Name des Users ändern |
+| POST | `/api/profile/update-preferences` | User-Preferences partiell updaten |
+
+### Favorites
+| Methode | Pfad | Zweck |
+|---------|------|-------|
+| POST | `/api/favorites/toggle` | Rezept-Favorit hinzufügen oder entfernen (idempotent) |
+| POST | `/api/favorites/add-custom` | Custom-Favorit (kein Rezept) anlegen |
+| POST | `/api/favorites/remove` | Favorit nach ID löschen (Ownership-Check) |
+
+### Automations
+| Methode | Pfad | Zweck |
+|---------|------|-------|
+| POST | `/api/automations/upsert` | Automation erstellen oder updaten (by user_id + type) |
+| POST | `/api/automations/delete` | Automation löschen (Ownership-Check) |
 
 ## Auth-Flow
 

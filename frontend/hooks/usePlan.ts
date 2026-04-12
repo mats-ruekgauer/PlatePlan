@@ -6,6 +6,7 @@ import {
   mapRecipe,
   supabase,
 } from '../lib/supabase';
+// supabase is used for reads only (meal plans, planned meals with recipes)
 import { callAPI } from '../lib/api';
 import { useHouseholdStore } from '../stores/householdStore';
 import type {
@@ -227,19 +228,14 @@ export function useSwapMeal() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       plannedMealId,
       chosenRecipeId,
     }: {
       plannedMealId: string;
       chosenRecipeId: string;
-    }) => {
-      const { error } = await supabase
-        .from('planned_meals')
-        .update({ chosen_recipe_id: chosenRecipeId })
-        .eq('id', plannedMealId);
-      if (error) throw error;
-    },
+    }) =>
+      callAPI<{ success: boolean }>('/api/plan/swap-meal', { plannedMealId, chosenRecipeId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: planKeys.all });
     },
@@ -264,19 +260,14 @@ export function useUpdateMealStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       plannedMealId,
       status,
     }: {
       plannedMealId: string;
       status: MealStatus;
-    }) => {
-      const { error } = await supabase
-        .from('planned_meals')
-        .update({ status })
-        .eq('id', plannedMealId);
-      if (error) throw error;
-    },
+    }) =>
+      callAPI<{ success: boolean }>('/api/plan/update-meal-status', { plannedMealId, status }),
     onMutate: async ({ plannedMealId, status }) => {
       await queryClient.cancelQueries({ queryKey: planKeys.all });
       queryClient.setQueriesData<HydratedPlan>(

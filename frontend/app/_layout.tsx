@@ -13,6 +13,28 @@ import { LanguageProvider } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import { selectOnboardingIsComplete, useOnboardingStore } from '../stores/onboardingStore';
 
+// ─── Dev auto-login ───────────────────────────────────────────────────────────
+
+const DEV_AUTO_LOGIN = process.env.EXPO_PUBLIC_DEV_AUTO_LOGIN === 'true';
+const DEV_EMAIL = process.env.EXPO_PUBLIC_DEV_EMAIL ?? '';
+const DEV_PASSWORD = process.env.EXPO_PUBLIC_DEV_PASSWORD ?? '';
+
+async function devAutoLogin(): Promise<boolean> {
+  if (!DEV_AUTO_LOGIN || !DEV_EMAIL || !DEV_PASSWORD) return false;
+  const { error } = await supabase.auth.signInWithPassword({
+    email: DEV_EMAIL,
+    password: DEV_PASSWORD,
+  });
+  if (error) {
+    console.warn('[DEV] Auto-login failed:', error.message);
+    return false;
+  }
+  // Mark onboarding complete so we skip straight to the app
+  useOnboardingStore.getState().markOnboardingComplete();
+  console.log('[DEV] Auto-login successful →', DEV_EMAIL);
+  return true;
+}
+
 // ─── React Query client ───────────────────────────────────────────────────────
 
 const queryClient = new QueryClient({
@@ -30,15 +52,61 @@ const queryClient = new QueryClient({
 
 // ─── Auth + onboarding guard ──────────────────────────────────────────────────
 
+/** Returns true if the session JWT is expired (or about to expire within 30s). */
+function isSessionExpired(expiresAt: number | undefined): boolean {
+  if (!expiresAt) return false;
+  return expiresAt * 1000 <= Date.now() + 30_000;
+}
+
+/** Tries to refresh the session. Signs out and returns false if it fails. */
+async function tryRefresh(): Promise<boolean> {
+  const { error } = await supabase.auth.refreshSession();
+  if (error) {
+    await supabase.auth.signOut();
+    return false;
+  }
+  return true;
+}
+
 function AuthGuard() {
   const segments = useSegments();
   const [session, setSession] = useState<boolean | null>(null); // null = loading
   const onboardingComplete = useOnboardingStore(selectOnboardingIsComplete);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(!!data.session);
-    });
+    // ── App-Start: JWT auslesen + exp prüfen ──────────────────────────────
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const s = data.session;
+
+      if (!s) {
+        // Keine Session → Dev-Auto-Login versuchen, sonst Login-Screen
+        if (DEV_AUTO_LOGIN) {
+          const ok = await devAutoLogin();
+          setSession(ok);
+        } else {
+          setSession(false);
+        }
+        return;
+      }
+
+      if (isSessionExpired(s.expires_at)) {
+        // Token abgelaufen → Refresh versuchen
+        const ok = await tryRefresh();
+        if (!ok && DEV_AUTO_LOGIN) {
+          // Refresh fehlgeschlagen, aber Dev-Mode → neu einloggen
+          const loginOk = await devAutoLogin();
+          setSession(loginOk);
+          return;
+        }
+        setSession(ok);
+        return;
+      }
+
+      setSession(true);
+    })();
+
+    // ── Lauscht auf Auth-Änderungen (Refresh, Sign-Out, etc.) ────────────
     const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(!!s);
     });
@@ -92,9 +160,18 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    function handleAppStateChange(nextState: AppStateStatus) {
+    async function handleAppStateChange(nextState: AppStateStatus) {
       if (nextState === 'active') {
         supabase.auth.startAutoRefresh();
+
+        // App kommt in den Vordergrund → Session nochmal prüfen
+        // (Token könnte im Hintergrund abgelaufen sein)
+        const { data } = await supabase.auth.getSession();
+        const s = data.session;
+        if (s && isSessionExpired(s.expires_at)) {
+          await tryRefresh();
+          // tryRefresh() signOut()s bei Fehler → onAuthStateChange feuert
+        }
       } else {
         supabase.auth.stopAutoRefresh();
       }

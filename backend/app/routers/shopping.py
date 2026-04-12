@@ -4,6 +4,7 @@ import logging
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from ..dependencies import get_current_user, get_service_client
 from ..models.shopping import GenerateShoppingListRequest
@@ -268,3 +269,97 @@ def generate_shopping_list(
         "grouped": grouped,
         "allItems": all_items,
     }
+
+
+# ─── Simple write endpoints ───────────────────────────────────────────────────
+
+
+class ToggleShoppingItemRequest(BaseModel):
+    listId: str
+    planId: str
+    itemName: str
+    unit: str
+
+
+class MarkListExportedRequest(BaseModel):
+    listId: str
+
+
+@router.post("/toggle-item")
+def toggle_shopping_item(
+    body: ToggleShoppingItemRequest,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Toggle the checked state of a shopping item."""
+    client = get_service_client()
+
+    list_res = (
+        client.from_("shopping_lists")
+        .select("id, household_id, items")
+        .eq("id", body.listId)
+        .single()
+        .execute()
+    )
+    if not list_res.data:
+        raise HTTPException(404, detail="Shopping list not found")
+    row = list_res.data
+
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("id")
+        .eq("household_id", row["household_id"])
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not membership:
+        raise HTTPException(403, detail="Forbidden")
+
+    items = row["items"] or []
+    updated = [
+        {**item, "checked": not item.get("checked", False)}
+        if item.get("name") == body.itemName and item.get("unit") == body.unit
+        else item
+        for item in items
+    ]
+
+    client.from_("shopping_lists").update({"items": updated}).eq("id", body.listId).execute()
+    return {"items": updated}
+
+
+@router.post("/mark-exported")
+def mark_list_exported(
+    body: MarkListExportedRequest,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Set exported_at timestamp on a shopping list."""
+    from datetime import datetime, timezone
+
+    client = get_service_client()
+
+    list_res = (
+        client.from_("shopping_lists")
+        .select("id, household_id")
+        .eq("id", body.listId)
+        .single()
+        .execute()
+    )
+    if not list_res.data:
+        raise HTTPException(404, detail="Shopping list not found")
+
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("id")
+        .eq("household_id", list_res.data["household_id"])
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not membership:
+        raise HTTPException(403, detail="Forbidden")
+
+    exported_at = datetime.now(timezone.utc).isoformat()
+    client.from_("shopping_lists").update({"exported_at": exported_at}).eq(
+        "id", body.listId
+    ).execute()
+    return {"exportedAt": exported_at}

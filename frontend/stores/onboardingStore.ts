@@ -106,6 +106,7 @@ interface OnboardingActions {
 
   // Utility
   reset: () => void;
+  markOnboardingComplete: () => void;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -227,6 +228,8 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
 
       // ── Utility ─────────────────────────────────────────────────────────────
       reset: () => set({ ...initialState, hasCompletedOnboarding: true, pantryStaples: [...DEFAULT_PANTRY_STAPLES], likedIngredients: [], dislikedIngredients: [] }),
+
+      markOnboardingComplete: () => set({ hasCompletedOnboarding: true }),
     }),
     {
       name: 'plateplan-onboarding',

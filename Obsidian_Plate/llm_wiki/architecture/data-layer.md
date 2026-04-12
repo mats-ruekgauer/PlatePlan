@@ -18,16 +18,38 @@ related: [[architecture/backend]], [[conventions/mappers]], [[conventions/auth]]
 ### FastAPI Client (`lib/api.ts`)
 - `callAPI()` schickt Requests ans FastAPI Backend
 - Hängt automatisch den Supabase JWT als `Authorization: Bearer` Header an
-- Genutzt für: alle AI-Operationen, Meal-Plan-Generierung, Shopping, Household-Reads/-Writes
+- Genutzt für: **alle Writes** + AI-Operationen + Household-Reads (historisch)
 
 ## Zugriffsmuster
 
 ```
-Frontend → Supabase Client → Supabase DB (RLS, Anon Key)
-Frontend → FastAPI Client  → FastAPI Backend → Supabase DB (Service Role, keine RLS)
+Frontend → Supabase Client → Supabase DB (RLS, Anon Key)     ← nur Reads
+Frontend → FastAPI Client  → FastAPI Backend → Supabase DB (Service Role, keine RLS)  ← alle Writes
 ```
 
-**Aktuell für Household:** Listen- und Member-Reads laufen über FastAPI statt direkt über den Supabase Client. Hintergrund: vorhandene `households`/`household_members` konnten clientseitig trotz existierender Daten als leerer State erscheinen.
+### Write-Regel (seit 2026-04-12, vollständig durchgesetzt)
+
+**Kein direkter Supabase-Write aus dem Frontend.** Alle Mutationen laufen über FastAPI:
+
+| Hook | Endpoint |
+|------|----------|
+| `useSwapMeal` | `POST /api/plan/swap-meal` |
+| `useUpdateMealStatus` | `POST /api/plan/update-meal-status` |
+| `useToggleShoppingItem` | `POST /api/shopping/toggle-item` |
+| `useMarkListExported` | `POST /api/shopping/mark-exported` |
+| `useUpdateDisplayName` | `POST /api/profile/update-display-name` |
+| `useUpdatePreferences` | `POST /api/profile/update-preferences` |
+| `useToggleFavorite` | `POST /api/favorites/toggle` |
+| `useAddCustomFavorite` | `POST /api/favorites/add-custom` |
+| `useRemoveFavorite` | `POST /api/favorites/remove` |
+| `useUpsertAutomation` | `POST /api/automations/upsert` |
+| `useDeleteAutomation` | `POST /api/automations/delete` |
+
+### Household-Reads (seit 2026-04-12 via Supabase direkt)
+
+`useMyHouseholds` und `useHouseholdMembers` lesen jetzt direkt via Supabase Client (anon key + RLS). FastAPI-Endpunkte `/api/households/mine` und `/{id}/members` existieren noch im Backend, werden aber nicht mehr vom Frontend aufgerufen.
+
+Damit gilt: **alle Tabellen** werden direkt via Supabase Client gelesen. Supabase Realtime kann für alle Tabellen subscribed werden.
 
 ## PostgREST-Fallen im Backend
 
@@ -42,6 +64,36 @@ Frontend → FastAPI Client  → FastAPI Backend → Supabase DB (Service Role, 
 - Backend (Service Role Key) umgeht RLS → kann für alle User schreiben (Inserts/Deletes)
 - **Service Role braucht keine INSERT-Policies** — sie bypassed RLS komplett
 - **ACHTUNG:** `DROP COLUMN CASCADE` löscht stillschweigend RLS-Policies die auf diese Spalte referenzieren → nach jeder CASCADE-Operation `pg_policies` prüfen
+
+### Recursion-Falle bei self-referentiellen Policies
+
+**Problem:** `household_members` hatte eine SELECT-Policy, die `household_members` selbst abfragte:
+```sql
+-- BROKEN: queries household_members from inside a policy ON household_members
+EXISTS (SELECT 1 FROM household_members hm2
+  WHERE hm2.household_id = household_members.household_id
+  AND hm2.user_id = auth.uid())
+```
+→ PostgreSQL Error `42P17: infinite recursion detected in policy for relation "household_members"`.
+
+Weil viele andere Policies (`households_select`, `meal_plans_member_access`, `shopping_lists_member_access`, `planned_meals` etc.) `household_members` in EXISTS-Subqueries abfragen, lösten sie dieselbe Rekursion aus. Ergebnis: leere Arrays statt Fehlermeldung — extrem schwer zu debuggen.
+
+**Fix (2026-04-12):** `SECURITY DEFINER` Funktion `auth_user_household_ids()` die `household_members` **ohne RLS** liest:
+```sql
+CREATE OR REPLACE FUNCTION public.auth_user_household_ids()
+RETURNS SETOF uuid LANGUAGE sql SECURITY DEFINER STABLE
+SET search_path = public AS $$
+  SELECT household_id FROM household_members WHERE user_id = auth.uid();
+$$;
+```
+Policy ersetzt durch:
+```sql
+CREATE POLICY "household_members_select" ON household_members
+FOR SELECT USING (household_id IN (SELECT auth_user_household_ids()));
+```
+Alle anderen Policies, die `household_members` in Subqueries abfragen, lösen nun keine Rekursion mehr aus, weil die neue `household_members_select`-Policy selbst keine weitere `household_members`-Query auslöst.
+
+**Regel:** Policies auf Tabelle X dürfen Tabelle X **nie direkt** abfragen. Immer `SECURITY DEFINER` Hilfsfunktion verwenden.
 
 ## Household-Level vs User-Level Einstellungen
 

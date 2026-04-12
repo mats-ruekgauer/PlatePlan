@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { mapProfile, mapUserPreferences, supabase } from '../lib/supabase';
+import { callAPI } from '../lib/api';
 import type { Profile, UserPreferences } from '../types';
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
@@ -71,18 +72,8 @@ export function useUpdateDisplayName() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (displayName: string) => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ display_name: displayName } as never)
-        .eq('id', session.user.id);
-      if (error) throw error;
-    },
+    mutationFn: (displayName: string) =>
+      callAPI<{ success: boolean }>('/api/profile/update-display-name', { displayName }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: profileKeys.profile() });
     },
@@ -94,7 +85,7 @@ export function useUpdatePreferences() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (updates: Partial<{
+    mutationFn: (updates: Partial<{
       calorieTarget: number | null;
       proteinTargetG: number | null;
       weightKg: number | null;
@@ -107,33 +98,8 @@ export function useUpdatePreferences() {
       maxCookTimeMinutes: number;
       pantryStaples: string[];
       preferredLanguage: 'en' | 'de';
-    }>) => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      // Map camelCase → snake_case for the DB
-      const dbUpdates: Record<string, unknown> = {};
-      if (updates.calorieTarget !== undefined) dbUpdates.calorie_target = updates.calorieTarget;
-      if (updates.proteinTargetG !== undefined) dbUpdates.protein_target_g = updates.proteinTargetG;
-      if (updates.weightKg !== undefined) dbUpdates.weight_kg = updates.weightKg;
-      if (updates.heightCm !== undefined) dbUpdates.height_cm = updates.heightCm;
-      if (updates.age !== undefined) dbUpdates.age = updates.age;
-      if (updates.dietaryRestrictions !== undefined) dbUpdates.dietary_restrictions = updates.dietaryRestrictions;
-      if (updates.dislikedIngredients !== undefined) dbUpdates.disliked_ingredients = updates.dislikedIngredients;
-      if (updates.likedCuisines !== undefined) dbUpdates.liked_cuisines = updates.likedCuisines;
-      if (updates.unmanagedSlotCalories !== undefined) dbUpdates.unmanaged_slot_calories = updates.unmanagedSlotCalories;
-      if (updates.maxCookTimeMinutes !== undefined) dbUpdates.max_cook_time_minutes = updates.maxCookTimeMinutes;
-      if (updates.pantryStaples !== undefined) dbUpdates.pantry_staples = updates.pantryStaples;
-      if (updates.preferredLanguage !== undefined) dbUpdates.preferred_language = updates.preferredLanguage;
-
-      const { error } = await supabase
-        .from('user_preferences')
-        .update(dbUpdates as never)
-        .eq('user_id', session.user.id);
-      if (error) throw error;
-    },
+    }>) =>
+      callAPI<{ success: boolean }>('/api/profile/update-preferences', updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: profileKeys.preferences() });
     },

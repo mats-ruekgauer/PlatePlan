@@ -29,6 +29,26 @@ Append-only Chronologie aller Operationen. Format:
 - Was: Household-Daten existierten in `households` und `household_members`, wurden im Frontend aber teils als leerer State gelesen. Reads (`mine`, `members`) und Mutationen (`update`, `leave`) laufen jetzt über FastAPI mit Service Role; Household-Queries invalidieren sofort und validieren `activeHouseholdId` gegen echte Daten.
 - Betroffene Seiten: architecture/backend, architecture/data-layer, entities/household, conventions/react-query
 
+## [2026-04-12] ingest | Auth vollständig implementiert + Architektur in CLAUDE.md dokumentiert
+- Was: callAPI() hat jetzt 401-Handling (Refresh → Retry → signOut). CLAUDE.md vollständig mit Architektur-Regeln, Endpunkt-Liste, Read/Write-Trennung. conventions/auth.md mit vollständigem Auth-Flow inklusive JWT-Validierungs-Algorithmen und 401-Flow.
+- Betroffene Seiten: conventions/auth
+
+## [2026-04-12] ingest | Household-Reads auf Supabase-Direct-Read umgestellt
+- Was: useMyHouseholds + useHouseholdMembers lesen jetzt direkt via Supabase Client statt über FastAPI. RLS-Policies für households/household_members waren bereits gefixt. FastAPI-Endpunkte /mine + /{id}/members bleiben im Backend aber werden nicht mehr aufgerufen. Architektur jetzt 100% sauber: Reads via Supabase, Writes via FastAPI.
+- Betroffene Seiten: architecture/backend, architecture/data-layer
+
+## [2026-04-12] ingest | Architektur-Alignment: alle Frontend-Writes auf FastAPI migriert
+- Was: 11 direkte Supabase-Writes aus dem Frontend entfernt und durch FastAPI-Endpunkte ersetzt. Betroffen: usePlan (swap-meal, update-meal-status), useShoppingList (toggle-item, mark-exported), useProfile (update-display-name, update-preferences), useFavorites (toggle, add-custom, remove), useAutomations (upsert, delete). Außerdem: Household-Reads via FastAPI als bewusste Ausnahme dokumentiert (RLS-historisch bedingt, kein Realtime).
+- Betroffene Seiten: architecture/backend, architecture/data-layer
+
+## [2026-04-12] issue | household--invite-flow-redesign
+- Was: Neues Issue angelegt — QR-Code-View direkt nach Household-Erstellung, Kurz-Code-Eingabe beim Join, vorgefertigte Share-Nachricht, 6h-Ablauf für Invite-Links
+- Betroffene Seiten: features/02_current/household/01_Overview, issues/open/household--invite-flow-redesign
+
+## [2026-04-12] fix | RLS Infinite Recursion in household_members gefixt
+- Was: `household_members` SELECT-Policy fragte `household_members` selbst ab → PostgreSQL 42P17 infinite recursion. Alle Tabellen die `household_members` in EXISTS-Subqueries referenzieren (households, meal_plans, shopping_lists, planned_meals, profiles) lieferten leere Arrays statt Fehler. Fix: `SECURITY DEFINER` Funktion `auth_user_household_ids()` die ohne RLS liest, Policy auf `household_id IN (SELECT auth_user_household_ids())` umgestellt.
+- Betroffene Seiten: architecture/data-layer
+
 ## [2026-04-12] ingest | Backend-Fixes für PostgREST-Nullfälle, AI-Zahlen und Household-Member-Reads
 - Was: Dokumentiert, dass `maybe_single()` bei 0 Rows `None` liefert, AI-Rezeptzahlen vor dem DB-Insert auf Integer normalisiert werden und Household-Mitglieder im Backend ohne fragilen `profiles(...)`-Join geladen werden
 - Betroffene Seiten: architecture/backend, architecture/data-layer, entities/household, entities/recipe, decisions/defensive-postgrest-handling-2026-04-12

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { mapShoppingList, supabase } from '../lib/supabase';
+// supabase is used for reads only (shopping lists)
 import { callAPI } from '../lib/api';
 import type { GroupedShoppingList, ShoppingItem, ShoppingList } from '../types';
 
@@ -59,7 +60,7 @@ export function useToggleShoppingItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       listId,
       planId,
       itemName,
@@ -69,25 +70,13 @@ export function useToggleShoppingItem() {
       planId: string;
       itemName: string;
       unit: string;
-    }) => {
-      // Read current list from cache first to avoid an extra DB round-trip
-      const cached = queryClient.getQueryData<ShoppingList>(shoppingKeys.byPlan(planId));
-
-      const currentItems: ShoppingItem[] = cached?.items ?? [];
-      const updated = currentItems.map((item) =>
-        item.name === itemName && item.unit === unit
-          ? { ...item, checked: !item.checked }
-          : item,
-      );
-
-      const { error } = await supabase
-        .from('shopping_lists')
-        .update({ items: updated })
-        .eq('id', listId);
-      if (error) throw error;
-
-      return updated;
-    },
+    }) =>
+      callAPI<{ items: ShoppingItem[] }>('/api/shopping/toggle-item', {
+        listId,
+        planId,
+        itemName,
+        unit,
+      }),
     // Optimistic update — flip the item immediately in the cache
     onMutate: async ({ planId, itemName, unit }) => {
       await queryClient.cancelQueries({ queryKey: shoppingKeys.byPlan(planId) });
@@ -124,13 +113,8 @@ export function useMarkListExported() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ listId, planId }: { listId: string; planId: string }) => {
-      const { error } = await supabase
-        .from('shopping_lists')
-        .update({ exported_at: new Date().toISOString() })
-        .eq('id', listId);
-      if (error) throw error;
-    },
+    mutationFn: ({ listId }: { listId: string; planId: string }) =>
+      callAPI<{ exportedAt: string }>('/api/shopping/mark-exported', { listId }),
     onSuccess: (_data, { planId }) => {
       queryClient.invalidateQueries({ queryKey: shoppingKeys.byPlan(planId) });
     },

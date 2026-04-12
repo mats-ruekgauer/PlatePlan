@@ -48,6 +48,7 @@ export default function MealDetailScreen() {
   const { data: existingFeedback } = useMealFeedback(id);
   const submitFeedback = useSubmitFeedback();
   const toggleFavorite = useToggleFavorite();
+  const isFavorite = useIsFavorite(meal?.recipe.id);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const { control, handleSubmit, reset, formState: { isDirty } } = useForm<FeedbackForm>({
@@ -113,8 +114,6 @@ export default function MealDetailScreen() {
   }
 
   const { recipe } = meal;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const isFavorite = useIsFavorite(recipe.id);
 
   return (
     <KeyboardAvoidingView

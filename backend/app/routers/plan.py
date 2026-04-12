@@ -4,7 +4,7 @@ from datetime import date
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from postgrest.exceptions import APIError
 
 from ..dependencies import get_current_user, get_service_client
@@ -478,5 +478,92 @@ Respond ONLY with a valid JSON object conforming to this exact structure:
     )
     if update_res.data is None:
         raise HTTPException(500, detail="Failed to update planned meal")
+
+    return {"success": True}
+
+
+# ─── Simple write endpoints ───────────────────────────────────────────────────
+
+
+class SwapMealRequest(BaseModel):
+    plannedMealId: str
+    chosenRecipeId: str
+
+
+class UpdateMealStatusRequest(BaseModel):
+    plannedMealId: str
+    status: str
+
+
+@router.post("/swap-meal")
+def swap_meal(
+    body: SwapMealRequest,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Set the chosen recipe for a planned meal slot."""
+    client = get_service_client()
+
+    pm_res = (
+        client.from_("planned_meals")
+        .select("id, meal_plans(household_id)")
+        .eq("id", body.plannedMealId)
+        .single()
+        .execute()
+    )
+    if not pm_res.data:
+        raise HTTPException(404, detail="Planned meal not found")
+
+    household_id = pm_res.data["meal_plans"]["household_id"]
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not membership:
+        raise HTTPException(403, detail="Forbidden")
+
+    client.from_("planned_meals").update(
+        {"chosen_recipe_id": body.chosenRecipeId}
+    ).eq("id", body.plannedMealId).execute()
+
+    return {"success": True}
+
+
+@router.post("/update-meal-status")
+def update_meal_status(
+    body: UpdateMealStatusRequest,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Update the status of a planned meal."""
+    client = get_service_client()
+
+    pm_res = (
+        client.from_("planned_meals")
+        .select("id, meal_plans(household_id)")
+        .eq("id", body.plannedMealId)
+        .single()
+        .execute()
+    )
+    if not pm_res.data:
+        raise HTTPException(404, detail="Planned meal not found")
+
+    household_id = pm_res.data["meal_plans"]["household_id"]
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not membership:
+        raise HTTPException(403, detail="Forbidden")
+
+    client.from_("planned_meals").update(
+        {"status": body.status}
+    ).eq("id", body.plannedMealId).execute()
 
     return {"success": True}

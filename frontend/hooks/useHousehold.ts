@@ -3,6 +3,7 @@ import { Share } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { callAPI } from '../lib/api';
+import { mapHousehold, mapHouseholdMember, supabase } from '../lib/supabase';
 import { useHouseholdStore } from '../stores/householdStore';
 import type { Household, HouseholdMember } from '../types';
 
@@ -15,18 +16,43 @@ export const householdKeys = {
 };
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
+// Reads go directly to Supabase (RLS + anon key) so Realtime subscriptions work.
+// Writes go through FastAPI (see mutations below).
 
 async function fetchMyHouseholds(): Promise<Household[]> {
-  const result = await callAPI<{ households: Household[] }>('/api/households/mine', {});
-  return result.households ?? [];
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: memberships, error: mErr } = await (supabase as any)
+    .from('household_members')
+    .select('household_id')
+    .eq('user_id', session.user.id);
+  if (mErr) throw mErr;
+
+  const ids = ((memberships ?? []) as { household_id: string }[]).map((m) => m.household_id);
+  if (!ids.length) return [];
+
+  const { data, error } = await supabase
+    .from('households')
+    .select('*')
+    .in('id', ids)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapHousehold);
 }
 
 async function fetchHouseholdMembers(householdId: string): Promise<HouseholdMember[]> {
-  const result = await callAPI<{ members: HouseholdMember[] }>(
-    `/api/households/${householdId}/members`,
-    {},
-  );
-  return result.members ?? [];
+  const { data, error } = await supabase
+    .from('household_members')
+    .select('*, profiles(*)')
+    .eq('household_id', householdId)
+    .order('joined_at', { ascending: true });
+  if (error) throw error;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((row: any) => mapHouseholdMember(row));
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────

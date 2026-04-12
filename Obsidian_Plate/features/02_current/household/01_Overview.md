@@ -23,3 +23,6 @@ Wachstum durch Einladungen. Mehrspieler-Use-Case erhöht Retention.
 
 ## Out of scope
 Rollen-Management über Owner/Member hinaus, Household verlassen
+
+## Open Issues
+- [[issues/open/household--invite-flow-redesign/01_Issue|Invite Flow Redesign]] — QR-Code-View nach Erstellung, Kurz-Code-Join, Share-Nachricht, 6h-Ablauf
