@@ -14,4 +14,4 @@ Keine
 Keine
 
 ## Needs follow-up
-- Household verlassen Flow fehlt noch
+- Kein akuter Follow-up aus dem Read-Fix. Falls die RLS-Policies später vollständig verifiziert werden, kann der Household-Read-Pfad optional wieder clientseitig bewertet werden.

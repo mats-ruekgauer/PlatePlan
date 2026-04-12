@@ -15,3 +15,10 @@ class JoinHouseholdRequest(BaseModel):
 class CreateInviteRequest(BaseModel):
     usageLimit: int | None = None
     expiryDays: int = 7
+
+
+class UpdateHouseholdRequest(BaseModel):
+    name: str | None = None
+    managedMealSlots: list[str] | None = None
+    shoppingDays: list[int] | None = None
+    batchCookDays: int | None = None

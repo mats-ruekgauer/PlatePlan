@@ -24,3 +24,11 @@ Append-only Chronologie aller Operationen. Format:
 ## [2026-04-12] ingest | Vollständige Obsidian-Initialisierung
 - Was: Kompletter Vault-Stand aus Codebase-Analyse initialisiert — alle 9 Production Features, 5 Backlog Features, Backlog priorisiert, HOME.md befüllt
 - Betroffene Seiten: features/03_production/* (9 Features), features/01_not_implemented/* (5 Features), roadmap/backlog.md, HOME.md
+
+## [2026-04-12] ingest | Household Read-Pfad auf Backend umgestellt
+- Was: Household-Daten existierten in `households` und `household_members`, wurden im Frontend aber teils als leerer State gelesen. Reads (`mine`, `members`) und Mutationen (`update`, `leave`) laufen jetzt über FastAPI mit Service Role; Household-Queries invalidieren sofort und validieren `activeHouseholdId` gegen echte Daten.
+- Betroffene Seiten: architecture/backend, architecture/data-layer, entities/household, conventions/react-query
+
+## [2026-04-12] ingest | Backend-Fixes für PostgREST-Nullfälle, AI-Zahlen und Household-Member-Reads
+- Was: Dokumentiert, dass `maybe_single()` bei 0 Rows `None` liefert, AI-Rezeptzahlen vor dem DB-Insert auf Integer normalisiert werden und Household-Mitglieder im Backend ohne fragilen `profiles(...)`-Join geladen werden
+- Betroffene Seiten: architecture/backend, architecture/data-layer, entities/household, entities/recipe, decisions/defensive-postgrest-handling-2026-04-12

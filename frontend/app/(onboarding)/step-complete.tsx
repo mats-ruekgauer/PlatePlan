@@ -50,7 +50,7 @@ export default function StepComplete() {
       setCurrentStep('done');
 
       await delay(600);
-      router.replace('/household/setup');
+      router.replace('/household/setup?source=onboarding');
     } catch (err) {
       const message =
         err instanceof Error

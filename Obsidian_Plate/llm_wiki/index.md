@@ -8,9 +8,9 @@ Katalog aller Wiki-Seiten. Agents lesen diesen Index zuerst, bevor sie einzelne 
 
 | Seite | Summary |
 |-------|---------|
-| [[architecture/backend]] | FastAPI-Endpunkte, Auth-Flow, Service-Role vs JWT |
+| [[architecture/backend]] | FastAPI-Endpunkte, Auth-Flow, Service-Role vs JWT, Household-Read-Endpoints |
 | [[architecture/frontend]] | Expo Router, Route Groups, Navigation-Guard |
-| [[architecture/data-layer]] | Supabase Client vs FastAPI Client, RLS, mappers |
+| [[architecture/data-layer]] | Supabase Client vs FastAPI Client, RLS, mappers, Household-Read-Pfad |
 | [[architecture/state-management]] | React Query (Server State) vs Zustand (Client State) |
 
 ## Entities
@@ -18,7 +18,7 @@ Katalog aller Wiki-Seiten. Agents lesen diesen Index zuerst, bevor sie einzelne 
 | Seite | Summary |
 |-------|---------|
 | [[entities/meal-plan]] | PlannedMeal (DB-Row) vs HydratedMeal (aufgelöstes Recipe) |
-| [[entities/household]] | Household-Modell, Invite-Token-Flow |
+| [[entities/household]] | Household-Modell, Invite-Token-Flow, Read-/Write-Flow |
 | [[entities/recipe]] | Recipe-Struktur und Felder |
 
 ## Conventions
@@ -26,7 +26,7 @@ Katalog aller Wiki-Seiten. Agents lesen diesen Index zuerst, bevor sie einzelne 
 | Seite | Summary |
 |-------|---------|
 | [[conventions/mappers]] | snake_case → camelCase Mapper-Funktionen, Pflichtnutzung |
-| [[conventions/react-query]] | Cache-Keys nach weekStart, Invalidierung nach Mutation |
+| [[conventions/react-query]] | Cache-Keys nach weekStart/household, Invalidierung nach Mutation |
 | [[conventions/auth]] | JWT-Flow Frontend → FastAPI, Service-Role für Writes |
 | [[conventions/ai-calls]] | AI-Calls nur via FastAPI Backend, nie client-seitig |
 
@@ -36,3 +36,4 @@ Katalog aller Wiki-Seiten. Agents lesen diesen Index zuerst, bevor sie einzelne 
 |-------|---------|
 | [[decisions/fastapi-over-edge-functions]] | Warum AI-Calls vom Edge-Function ins FastAPI-Backend wanderten |
 | [[decisions/align-schema-2026-04-12]] | DB/Backend/Frontend-Alignment: RLS-Bugs, Household-Settings, fehlende Columns |
+| [[decisions/defensive-postgrest-handling-2026-04-12]] | Warum FastAPI `maybe_single()`, AI-Zahlformate und Household-Profile defensiv behandelt |

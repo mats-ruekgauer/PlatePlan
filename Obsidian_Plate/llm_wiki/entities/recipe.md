@@ -2,7 +2,7 @@
 title: Recipe
 category: entity
 last_updated: 2026-04-12
-related: [[entities/meal-plan]], [[conventions/mappers]]
+related: [[entities/meal-plan]], [[conventions/mappers]], [[architecture/backend]], [[architecture/data-layer]]
 ---
 
 # Recipe
@@ -21,3 +21,17 @@ Niemals snake_case Felder direkt verwenden. Siehe [[conventions/mappers]].
 
 In der Supabase-Datenbank. Reads über Supabase Client (mit RLS).
 Writes über FastAPI Backend (Service Role, umgeht RLS).
+
+## Schreibpfad für AI-Rezepte
+
+AI-generierte Rezepte werden in `backend/app/routers/plan.py` vor dem Insert normalisiert.
+
+Wichtige Regel:
+- `caloriesPerServing`
+- `proteinPerServingG`
+- `carbsPerServingG`
+- `fatPerServingG`
+- `servings`
+- `cookTimeMinutes`
+
+werden backend-seitig als Ganzzahlen behandelt, damit DeepSeek-Werte wie `450.0` oder `"70.0"` nicht an Integer-Spalten der DB scheitern.

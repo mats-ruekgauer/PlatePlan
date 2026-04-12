@@ -1,4 +1,5 @@
-import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 
 import { Button } from '../../components/ui/Button';
+import { householdKeys } from '../../hooks/useHousehold';
 import { callAPI } from '../../lib/api';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useHouseholdStore } from '../../stores/householdStore';
@@ -20,12 +22,27 @@ type Mode = 'choose' | 'create' | 'join';
 export default function StepHousehold() {
   const store = useOnboardingStore();
   const setActiveHouseholdId = useHouseholdStore((s) => s.setActiveHouseholdId);
+  const queryClient = useQueryClient();
+  const { source } = useLocalSearchParams<{ source?: 'onboarding' | 'profile' }>();
 
   const [mode, setMode] = useState<Mode>('choose');
   const [householdName, setHouseholdName] = useState('My Household');
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState('');
+
+  function leaveSetup() {
+    if (source === 'profile') {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/profile');
+      }
+      return;
+    }
+
+    router.replace('/(tabs)');
+  }
 
   async function handleCreate() {
     if (!householdName.trim()) {
@@ -46,8 +63,9 @@ export default function StepHousehold() {
       );
 
       setActiveHouseholdId(result.householdId);
+      await queryClient.invalidateQueries({ queryKey: householdKeys.mine() });
       store.reset();
-      router.replace('/(tabs)');
+      leaveSetup();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       Alert.alert('Error', msg);
@@ -74,8 +92,9 @@ export default function StepHousehold() {
       );
 
       setActiveHouseholdId(result.householdId);
+      await queryClient.invalidateQueries({ queryKey: householdKeys.mine() });
       store.reset();
-      router.replace('/(tabs)');
+      leaveSetup();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       Alert.alert('Error', msg);
@@ -104,7 +123,7 @@ export default function StepHousehold() {
           if (mode !== 'choose') {
             setMode('choose');
           } else {
-            router.canGoBack() ? router.back() : router.replace('/(tabs)');
+            leaveSetup();
           }
         }}
         className="self-start"

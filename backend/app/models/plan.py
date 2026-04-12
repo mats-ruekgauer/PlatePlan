@@ -1,5 +1,6 @@
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class GeneratePlanRequest(BaseModel):
@@ -25,17 +26,42 @@ class Recipe(BaseModel):
     description: str
     ingredients: list[Ingredient] = Field(min_length=1)
     steps: list[str] = Field(min_length=1)
-    caloriesPerServing: float = Field(gt=0)
-    proteinPerServingG: float = Field(ge=0)
-    carbsPerServingG: float = Field(ge=0)
-    fatPerServingG: float = Field(ge=0)
+    caloriesPerServing: int = Field(gt=0)
+    proteinPerServingG: int = Field(ge=0)
+    carbsPerServingG: int = Field(ge=0)
+    fatPerServingG: int = Field(ge=0)
     servings: int = Field(gt=0)
-    cookTimeMinutes: float = Field(gt=0)
+    cookTimeMinutes: int = Field(gt=0)
     cuisine: str
     tags: list[str]
     isSeasonal: bool
     season: Literal["spring", "summer", "autumn", "winter", "all"]
     estimatedPriceEur: float = Field(ge=0)
+
+    @field_validator(
+        "caloriesPerServing",
+        "proteinPerServingG",
+        "carbsPerServingG",
+        "fatPerServingG",
+        "servings",
+        "cookTimeMinutes",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_integer_fields(cls, value):
+        if isinstance(value, bool):
+            raise ValueError("must be an integer")
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(Decimal(str(value)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        if isinstance(value, str):
+            try:
+                parsed = Decimal(value)
+            except InvalidOperation as exc:
+                raise ValueError("must be an integer") from exc
+            return int(parsed.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        raise ValueError("must be an integer")
 
 
 class MealSlot(BaseModel):

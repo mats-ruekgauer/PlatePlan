@@ -51,6 +51,12 @@ function parseOptionalNumber(value: string): number | null | 'invalid' {
   return parsed;
 }
 
+function parseOptionalInteger(value: string): number | null | 'invalid' {
+  const parsed = parseOptionalNumber(value);
+  if (parsed === null || parsed === 'invalid') return parsed;
+  return Number.isInteger(parsed) ? parsed : 'invalid';
+}
+
 export default function NewRecipeScreen() {
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
@@ -80,11 +86,11 @@ export default function NewRecipeScreen() {
       return;
     }
 
-    const parsedCookTime = parseOptionalNumber(cookTimeMinutes);
-    const parsedCalories = parseOptionalNumber(calories);
-    const parsedProtein = parseOptionalNumber(protein);
-    const parsedCarbs = parseOptionalNumber(carbs);
-    const parsedFat = parseOptionalNumber(fat);
+    const parsedCookTime = parseOptionalInteger(cookTimeMinutes);
+    const parsedCalories = parseOptionalInteger(calories);
+    const parsedProtein = parseOptionalInteger(protein);
+    const parsedCarbs = parseOptionalInteger(carbs);
+    const parsedFat = parseOptionalInteger(fat);
 
     if (
       parsedCookTime === 'invalid' ||

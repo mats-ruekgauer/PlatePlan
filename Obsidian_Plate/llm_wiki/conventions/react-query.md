@@ -18,6 +18,13 @@ Meal-Plan-Daten werden per `weekStart`-Datum gecacht:
 
 Damit kann der User durch Wochen browsen ohne Daten neu zu laden.
 
+Household-Daten nutzen feste Keys:
+
+```typescript
+['households', 'mine']
+['households', householdId, 'members']
+```
+
 ## Invalidierung nach Mutation
 
 Nach jeder Mutation die Plan-Daten ändert:
@@ -28,6 +35,11 @@ queryClient.invalidateQueries({ queryKey: ['mealPlan', weekStart] });
 ```
 
 Regel: **Nach jeder Mutation die Plan-Daten betrifft, relevante Query Keys invalidieren.**
+
+Für Household-Flows gilt zusätzlich:
+- Nach `create`, `join`, `update`, `leave` immer `['households', 'mine']` invalidieren
+- Nach Member-relevanten Änderungen zusätzlich `['households', householdId, 'members']` invalidieren
+- Household-Queries nutzen `staleTime: 0`, damit ein zuvor leer gecachter Zustand nicht minutenlang sichtbar bleibt
 
 ## Hooks
 

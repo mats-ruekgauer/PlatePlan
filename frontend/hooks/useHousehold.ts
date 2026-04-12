@@ -1,7 +1,7 @@
+import React from 'react';
 import { Share } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { mapHousehold, mapHouseholdMember, supabase } from '../lib/supabase';
 import { callAPI } from '../lib/api';
 import { useHouseholdStore } from '../stores/householdStore';
 import type { Household, HouseholdMember } from '../types';
@@ -17,51 +17,50 @@ export const householdKeys = {
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
 async function fetchMyHouseholds(): Promise<Household[]> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return [];
-
-  // Get household_ids the user belongs to
-  const { data: rawMemberships, error: mErr } = await supabase
-    .from('household_members')
-    .select('household_id')
-    .eq('user_id', session.user.id);
-
-  if (mErr || !rawMemberships?.length) return [];
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const memberships = rawMemberships as any[] as Array<{ household_id: string }>;
-  const ids = memberships.map((m) => m.household_id);
-
-  const { data, error } = await supabase
-    .from('households')
-    .select('*')
-    .in('id', ids)
-    .order('created_at', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []).map(mapHousehold);
+  const result = await callAPI<{ households: Household[] }>('/api/households/mine', {});
+  return result.households ?? [];
 }
 
 async function fetchHouseholdMembers(householdId: string): Promise<HouseholdMember[]> {
-  const { data, error } = await supabase
-    .from('household_members')
-    .select('*, profiles(display_name)')
-    .eq('household_id', householdId);
-
-  if (error) throw error;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data ?? []).map((row: any) => mapHouseholdMember(row));
+  const result = await callAPI<{ members: HouseholdMember[] }>(
+    `/api/households/${householdId}/members`,
+    {},
+  );
+  return result.members ?? [];
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 /** All households the current user belongs to. */
 export function useMyHouseholds() {
-  return useQuery({
+  const activeHouseholdId = useHouseholdStore((s) => s.activeHouseholdId);
+  const setActiveHouseholdId = useHouseholdStore((s) => s.setActiveHouseholdId);
+
+  const query = useQuery({
     queryKey: householdKeys.mine(),
     queryFn: fetchMyHouseholds,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
+
+  React.useEffect(() => {
+    if (!query.isSuccess) return;
+
+    const households = query.data ?? [];
+    if (households.length === 0) {
+      if (activeHouseholdId !== null) setActiveHouseholdId(null);
+      return;
+    }
+
+    const activeStillExists = activeHouseholdId
+      ? households.some((household) => household.id === activeHouseholdId)
+      : false;
+
+    if (!activeStillExists) {
+      setActiveHouseholdId(households[0].id);
+    }
+  }, [activeHouseholdId, query.data, query.isSuccess, setActiveHouseholdId]);
+
+  return query;
 }
 
 /** Members of a specific household. */
@@ -70,7 +69,7 @@ export function useHouseholdMembers(householdId: string | undefined) {
     queryKey: householdKeys.members(householdId ?? ''),
     queryFn: () => fetchHouseholdMembers(householdId!),
     enabled: !!householdId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 }
 
@@ -143,21 +142,8 @@ export function useUpdateHousehold() {
         shoppingDays?: number[];
         batchCookDays?: number;
       };
-    }) => {
-      const payload: Record<string, unknown> = {};
-      if (updates.name !== undefined) payload.name = updates.name;
-      if (updates.managedMealSlots !== undefined) payload.managed_meal_slots = updates.managedMealSlots;
-      if (updates.shoppingDays !== undefined) payload.shopping_days = updates.shoppingDays;
-      if (updates.batchCookDays !== undefined) payload.batch_cook_days = updates.batchCookDays;
-      payload.updated_at = new Date().toISOString();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from('households')
-        .update(payload)
-        .eq('id', householdId);
-      if (error) throw error;
-    },
+    }) =>
+      callAPI<{ household: Household }>(`/api/households/${householdId}/update`, updates),
     onSuccess: (_data, { householdId }) => {
       queryClient.invalidateQueries({ queryKey: householdKeys.mine() });
       queryClient.invalidateQueries({ queryKey: householdKeys.members(householdId) });
@@ -172,17 +158,8 @@ export function useLeaveHousehold() {
   const setActiveHouseholdId = useHouseholdStore((s) => s.setActiveHouseholdId);
 
   return useMutation({
-    mutationFn: async (householdId: string) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('household_members')
-        .delete()
-        .eq('household_id', householdId)
-        .eq('user_id', session.user.id);
-      if (error) throw error;
-    },
+    mutationFn: async (householdId: string) =>
+      callAPI<{ ok: boolean }>(`/api/households/${householdId}/leave`, {}),
     onSuccess: (_data, householdId) => {
       if (activeHouseholdId === householdId) {
         setActiveHouseholdId(null);

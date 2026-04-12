@@ -30,12 +30,12 @@ RecipeObject structure:
   "description": string (1-2 sentences),
   "ingredients": [{ "name": string, "amount": number, "unit": string, "category": string }],
   "steps": string[],
-  "caloriesPerServing": number,
-  "proteinPerServingG": number,
-  "carbsPerServingG": number,
-  "fatPerServingG": number,
-  "servings": number,
-  "cookTimeMinutes": number,
+  "caloriesPerServing": integer,
+  "proteinPerServingG": integer,
+  "carbsPerServingG": integer,
+  "fatPerServingG": integer,
+  "servings": integer,
+  "cookTimeMinutes": integer,
   "cuisine": string,
   "tags": string[],
   "isSeasonal": boolean,
@@ -48,6 +48,7 @@ Rules:
 - Respect all dietary restrictions and disliked ingredients strictly
 - Hit the calorie target for managed meals (total daily calories = target minus unmanagedSlotCalories)
 - Respect maxCookTimeMinutes
+- caloriesPerServing, proteinPerServingG, carbsPerServingG, fatPerServingG, servings and cookTimeMinutes must be integers
 - If batchCookDays > 1, group recipes so the same dish appears across consecutive days and scale servings accordingly
 - Prefer liked cuisines
 - liked_ingredients lists ingredients the user enjoys — incorporate them where appropriate and naturally

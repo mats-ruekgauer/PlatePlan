@@ -8,7 +8,12 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..dependencies import get_current_user, get_service_client
-from ..models.household import CreateHouseholdRequest, JoinHouseholdRequest, CreateInviteRequest
+from ..models.household import (
+    CreateHouseholdRequest,
+    JoinHouseholdRequest,
+    CreateInviteRequest,
+    UpdateHouseholdRequest,
+)
 from ..config import settings
 from ..services.db import maybe_single_data
 
@@ -28,6 +33,52 @@ def _generate_invite_token() -> tuple[str, str]:
 
 def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _serialize_household(row: dict) -> dict:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "createdBy": row["created_by"],
+        "managedMealSlots": row.get("managed_meal_slots") or [],
+        "shoppingDays": row.get("shopping_days") or [],
+        "batchCookDays": row.get("batch_cook_days") or 1,
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+
+
+def _serialize_member(row: dict) -> dict:
+    profile = row.get("profiles") or {}
+    return {
+        "id": row["id"],
+        "householdId": row["household_id"],
+        "userId": row["user_id"],
+        "displayName": profile.get("display_name"),
+        "role": row["role"],
+        "status": row.get("status") or "active",
+        "joinedAt": row["joined_at"],
+    }
+
+
+def _attach_profiles_to_members(client, members: list[dict]) -> list[dict]:
+    user_ids = [row["user_id"] for row in members if row.get("user_id")]
+    if not user_ids:
+        return members
+
+    profiles_res = (
+        client.from_("profiles")
+        .select("id, display_name")
+        .in_("id", user_ids)
+        .execute()
+    )
+    profiles_by_id = {row["id"]: row for row in (profiles_res.data or [])}
+
+    hydrated: list[dict] = []
+    for row in members:
+        profile = profiles_by_id.get(row["user_id"])
+        hydrated.append({**row, "profiles": profile})
+    return hydrated
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -91,6 +142,37 @@ def create_household(
     return {"householdId": household_id, "inviteLink": invite_link}
 
 
+@router.post("/mine")
+def list_my_households(
+    _body: dict | None = None,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Return all households the current user belongs to."""
+    client = get_service_client()
+
+    memberships_res = (
+        client.from_("household_members")
+        .select("household_id")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    memberships = memberships_res.data or []
+    household_ids = [m["household_id"] for m in memberships]
+
+    if not household_ids:
+        return {"households": []}
+
+    households_res = (
+        client.from_("households")
+        .select("*")
+        .in_("id", household_ids)
+        .order("created_at")
+        .execute()
+    )
+    households = households_res.data or []
+    return {"households": [_serialize_household(row) for row in households]}
+
+
 @router.post("/join")
 def join_household(
     body: JoinHouseholdRequest,
@@ -145,6 +227,37 @@ def join_household(
     return {"householdId": household["id"], "householdName": household["name"]}
 
 
+@router.post("/{household_id}/members")
+def list_household_members(
+    household_id: str,
+    _body: dict | None = None,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Return all members of a household the caller belongs to."""
+    client = get_service_client()
+
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not membership:
+        raise HTTPException(403, detail="Forbidden: not a member of this household")
+
+    members_res = (
+        client.from_("household_members")
+        .select("*")
+        .eq("household_id", household_id)
+        .order("joined_at")
+        .execute()
+    )
+    members = _attach_profiles_to_members(client, members_res.data or [])
+    return {"members": [_serialize_member(row) for row in members]}
+
+
 @router.post("/{household_id}/invite")
 def create_invite(
     household_id: str,
@@ -193,3 +306,71 @@ def create_invite(
 
     invite_link = f"{settings.APP_SCHEME}://invite/{token}"
     return {"inviteLink": invite_link, "expiresAt": expires_at}
+
+
+@router.post("/{household_id}/update")
+def update_household(
+    household_id: str,
+    body: UpdateHouseholdRequest,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Update household settings. Only owners can edit."""
+    client = get_service_client()
+
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("role")
+        .eq("household_id", household_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not membership:
+        raise HTTPException(403, detail="Forbidden: not a member of this household")
+    if membership["role"] != "owner":
+        raise HTTPException(403, detail="Forbidden: only owners can update a household")
+
+    updates: dict = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if body.name is not None:
+        updates["name"] = body.name.strip()
+    if body.managedMealSlots is not None:
+        updates["managed_meal_slots"] = body.managedMealSlots
+    if body.shoppingDays is not None:
+        updates["shopping_days"] = body.shoppingDays
+    if body.batchCookDays is not None:
+        updates["batch_cook_days"] = body.batchCookDays
+
+    updated_res = (
+        client.from_("households")
+        .update(updates)
+        .eq("id", household_id)
+        .execute()
+    )
+    if not updated_res.data:
+        raise HTTPException(500, detail="Failed to update household")
+
+    return {"household": _serialize_household(updated_res.data[0])}
+
+
+@router.post("/{household_id}/leave")
+def leave_household(
+    household_id: str,
+    _body: dict | None = None,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Remove the current user from a household."""
+    client = get_service_client()
+
+    membership = maybe_single_data(
+        client.from_("household_members")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not membership:
+        raise HTTPException(404, detail="Membership not found")
+
+    client.from_("household_members").delete().eq("id", membership["id"]).execute()
+    return {"ok": True}

@@ -38,17 +38,33 @@ Mehrere User können einem Household angehören und einen gemeinsamen Meal-Plan 
 - `household_members`: SELECT für alle Mitglieder desselben Haushalts; INSERT/DELETE via Service Role
 - `household_invites`: SELECT für alle authentifizierten User (Join-Validierung); DELETE für Owner
 
-## Profiles-RLS-Sonderfall
+## Profiles-Sonderfall
 
-`household_members` joiniert oft mit `profiles(display_name)`. Dafür muss die `profiles`-Tabelle für Haushaltsmitglieder lesbar sein — nicht nur für den eigenen User. Die Policy `profiles: household member select` erlaubt das seit dem align_schema-Migration (2026-04-12).
+`household_members` wird oft mit `profiles(display_name)` kombiniert. Dafür muss die `profiles`-Tabelle für Haushaltsmitglieder lesbar sein — nicht nur für den eigenen User.
+
+Wichtig:
+- clientseitige Reads hängen dabei an funktionierenden RLS-Policies
+- backendseitige Household-Reads laufen inzwischen bewusst über FastAPI/Service-Role, damit die UI nicht an leeren Client-Reads hängen bleibt
+- der Member-Screen nutzt `POST /api/households/{id}/members` als kanonischen Read-Pfad
 
 ## API-Endpunkte
 
 | Endpunkt | Zweck |
 |----------|-------|
 | `POST /api/households` | Household erstellen + Invite-Token generieren |
+| `POST /api/households/mine` | Alle Haushalte des aktuellen Users laden |
 | `POST /api/households/join` | Household via Token beitreten |
+| `POST /api/households/{id}/members` | Mitglieder eines Haushalts laden |
 | `POST /api/households/{id}/invite` | Invite-Link rotieren (alten löschen) |
+| `POST /api/households/{id}/update` | Household-Name und Planungseinstellungen updaten |
+| `POST /api/households/{id}/leave` | Aktuellen User aus Household entfernen |
+
+## Read-/Write-Flow
+
+- Household **Create/Join/Invite/Update/Leave** laufen über FastAPI mit Service Role
+- Household **Reads** (`mine`, `members`) laufen ebenfalls über FastAPI, nicht mehr direkt über den Supabase Client
+- Grund: Die Daten existierten in `households` + `household_members`, aber clientseitige Reads konnten wegen RLS-/Read-Pfad-Problemen trotz vorhandener Daten `[]` liefern
+- `useMyHouseholds()` setzt `activeHouseholdId` auf den ersten gültigen Haushalt zurück, wenn der persistierte Zustand veraltet ist
 
 ## Frontend-Hooks
 
@@ -59,4 +75,5 @@ Mehrere User können einem Household angehören und einen gemeinsamen Meal-Plan 
 | `useCreateHousehold()` | Neuen Haushalt erstellen |
 | `useJoinHousehold()` | Via Token beitreten |
 | `useUpdateHousehold()` | Name/Slots/ShoppingDays/BatchCook updaten |
+| `useLeaveHousehold()` | Aktuellen User aus Household entfernen |
 | `useShareInvite()` | Link generieren + iOS Share Sheet öffnen |

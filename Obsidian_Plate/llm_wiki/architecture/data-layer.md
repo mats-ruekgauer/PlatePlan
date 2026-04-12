@@ -13,12 +13,12 @@ related: [[architecture/backend]], [[conventions/mappers]], [[conventions/auth]]
 - Vollständige TypeScript-Typdefinitionen (`Database` Interface)
 - CamelCase-Mapper-Funktionen: `mapMealPlan`, `mapRecipe` etc.
 - Transformiert snake_case DB-Rows → camelCase für UI
-- Genutzt für: Auth + direkte DB-Reads (mit RLS)
+- Genutzt für: Auth + direkte DB-Reads (mit RLS), solange der Read-Pfad stabil ist
 
 ### FastAPI Client (`lib/api.ts`)
 - `callAPI()` schickt Requests ans FastAPI Backend
 - Hängt automatisch den Supabase JWT als `Authorization: Bearer` Header an
-- Genutzt für: alle AI-Operationen, Meal-Plan-Generierung, Shopping
+- Genutzt für: alle AI-Operationen, Meal-Plan-Generierung, Shopping, Household-Reads/-Writes
 
 ## Zugriffsmuster
 
@@ -26,6 +26,15 @@ related: [[architecture/backend]], [[conventions/mappers]], [[conventions/auth]]
 Frontend → Supabase Client → Supabase DB (RLS, Anon Key)
 Frontend → FastAPI Client  → FastAPI Backend → Supabase DB (Service Role, keine RLS)
 ```
+
+**Aktuell für Household:** Listen- und Member-Reads laufen über FastAPI statt direkt über den Supabase Client. Hintergrund: vorhandene `households`/`household_members` konnten clientseitig trotz existierender Daten als leerer State erscheinen.
+
+## PostgREST-Fallen im Backend
+
+- `maybe_single().execute()` darf nicht wie ein normales Response-Objekt behandelt werden; bei 0 Rows kommt `None`
+- PostgREST-Relationen im `select()` sind nur stabil, wenn der FK in der Live-DB wirklich existiert und im Schema-Cache liegt
+- Wenn eine Relation optional oder instabil ist, im Backend lieber zwei explizite Reads machen und serverseitig mergen
+- AI-Antworten dürfen nicht blind in numerische DB-Spalten geschrieben werden; Schema-Normalisierung gehört vor den Insert
 
 ## RLS (Row Level Security)
 
@@ -48,8 +57,14 @@ Frontend → FastAPI Client  → FastAPI Backend → Supabase DB (Service Role, 
 ## Frontend: Wo werden Household-Settings angezeigt/bearbeitet?
 
 - **Anzeige** in `(tabs)/profile.tsx`: liest von `activeHousehold` (aus `useMyHouseholds()`), **nicht** aus `prefs`
-- **Bearbeiten** via `/settings/household` (`settings/household.tsx`) → `useUpdateHousehold` → `households` Tabelle
+- **Bearbeiten** via `/settings/household` (`settings/household.tsx`) → `useUpdateHousehold` → FastAPI `/api/households/{id}/update` → `households` Tabelle
 - **Nicht mehr:** onboarding screens für post-onboarding Edits nutzen (die schreiben in den Store, nicht direkt in die DB)
+
+## Household Cache-Verhalten
+
+- `useMyHouseholds()` und `useHouseholdMembers()` nutzen `staleTime: 0`
+- Nach `create`, `join`, `update`, `leave` wird `['households', 'mine']` invalidiert
+- Persistierter Zustand (`activeHouseholdId`) wird gegen die frisch geladenen Haushalte validiert und bei Bedarf automatisch auf den ersten gültigen Haushalt gesetzt
 
 ## Mapper-Regel
 

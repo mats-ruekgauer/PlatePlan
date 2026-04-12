@@ -45,7 +45,34 @@ def upsert_recipe(client, user_id: str, recipe: Recipe) -> str:
     if existing:
         return existing["id"]
 
-    payload = {
+    payload = _build_recipe_payload(user_id, recipe)
+    try:
+        inserted = client.from_("recipes").insert(payload).execute()
+    except APIError as exc:
+        if _is_missing_recipe_source_column(exc):
+            logger.warning("recipes.source missing in DB; retrying insert without source column")
+            payload.pop("source", None)
+            inserted = client.from_("recipes").insert(payload).execute()
+        elif _is_invalid_integer_input(exc):
+            logger.error("recipes insert rejected numeric payload: %s | payload=%s", exc, payload)
+            raise HTTPException(502, detail="AI recipe values could not be normalized for the database") from exc
+        else:
+            raise
+    if not inserted.data:
+        raise HTTPException(500, detail=f'Failed to insert recipe "{recipe.title}"')
+    return inserted.data[0]["id"]
+
+
+def _is_missing_recipe_source_column(exc: APIError) -> bool:
+    return exc.code == "42703" and "recipes.source" in str(exc)
+
+
+def _is_invalid_integer_input(exc: APIError) -> bool:
+    return exc.code == "22P02" and "type integer" in str(exc)
+
+
+def _build_recipe_payload(user_id: str, recipe: Recipe) -> dict:
+    return {
         "user_id": user_id,
         "title": recipe.title,
         "description": recipe.description,
@@ -64,22 +91,6 @@ def upsert_recipe(client, user_id: str, recipe: Recipe) -> str:
         "estimated_price_eur": recipe.estimatedPriceEur,
         "source": "ai_generated",
     }
-    try:
-        inserted = client.from_("recipes").insert(payload).execute()
-    except APIError as exc:
-        if _is_missing_recipe_source_column(exc):
-            logger.warning("recipes.source missing in DB; retrying insert without source column")
-            payload.pop("source", None)
-            inserted = client.from_("recipes").insert(payload).execute()
-        else:
-            raise
-    if not inserted.data:
-        raise HTTPException(500, detail=f'Failed to insert recipe "{recipe.title}"')
-    return inserted.data[0]["id"]
-
-
-def _is_missing_recipe_source_column(exc: APIError) -> bool:
-    return exc.code == "42703" and "recipes.source" in str(exc)
 
 
 def load_manual_recipes(client, user_id: str) -> list[dict]:
